@@ -36,7 +36,7 @@ export function Hero() {
         <div>
           <p className="animate-fade-up text-xs uppercase tracking-[0.3em] text-muted-foreground">{t.hero.eyebrow}</p>
           <h1 key={lang} className="font-display mt-6 text-5xl leading-[0.95] sm:text-7xl lg:text-8xl">
-            <RevealText text={t.hero.title} delay={200} /> <span className="text-dawn">ﷺ</span>
+            <RevealText text={t.hero.title} delay={200} /> <span className="arabic align-super text-[0.35em] text-dawn">ﷺ</span>
           </h1>
           <p className="animate-fade-up mt-6 max-w-xl text-base text-muted-foreground sm:text-lg" style={{ animationDelay: "1.2s" }}>{t.hero.subtitle}</p>
           <div className="animate-fade-up mt-10 flex flex-wrap gap-3" style={{ animationDelay: "1.6s" }}>
@@ -124,7 +124,7 @@ const news = [
 ];
 
 function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="inline-block rounded-md bg-dawn px-2 py-0.5 text-[11px] font-medium text-ink">{children}</span>;
+  return <span className="inline-block self-start rounded-md bg-dawn px-2 py-0.5 text-[11px] font-medium text-ink">{children}</span>;
 }
 
 export function LatestNews() {
