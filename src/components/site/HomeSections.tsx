@@ -76,9 +76,33 @@ const nodeStyle: Record<SignStatus, string> = {
   future: "h-3 w-3 border border-mist bg-background",
 };
 
+type MapNode = {
+  slug: string;
+  name: L10n;
+  summary: L10n;
+  status: SignStatus;
+  x: number;
+  y: number;
+  count?: number;
+};
+
 export function SignMap() {
   const { t, lang } = useI18n();
   const [hover, setHover] = useState<string | null>(null);
+  const { data } = useSuspenseQuery(homeHadithQuery);
+
+  const nodes: MapNode[] =
+    data.signs.length > 0
+      ? data.signs.map((s, i) => ({
+          slug: s.slug,
+          name: { id: s.nama, en: s.nama },
+          summary: { id: s.deskripsi_singkat ?? "", en: s.deskripsi_singkat ?? "" },
+          status: mapSignStatus(s.status),
+          count: s.hadithCount,
+          ...signPosition(i, data.signs.length),
+        }))
+      : signs.map((s) => ({ ...s }));
+
   return (
     <section className="mx-auto max-w-7xl px-5 py-24">
       <div className="grid gap-10 lg:grid-cols-[1fr_2.2fr] lg:items-center">
@@ -94,14 +118,14 @@ export function SignMap() {
         </div>
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-[radial-gradient(ellipse_at_60%_120%,var(--dusk),transparent_60%)]">
           <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-            {signs.slice(1).map((s, i) => {
-              const p = signs[i]!;
+            {nodes.slice(1).map((s, i) => {
+              const p = nodes[i]!;
               return <line key={s.slug} x1={p.x} y1={p.y} x2={s.x} y2={s.y} vectorEffect="non-scaling-stroke"
                 stroke="var(--bone)" strokeOpacity={s.status === "future" ? 0.15 : 0.4} strokeWidth="1" strokeDasharray={s.status === "future" ? "3 4" : undefined} />;
             })}
           </svg>
-          {signs.map((s) => (
-            <Link key={s.slug} to="/hadits/$slug" params={{ slug: s.slug }}
+          {nodes.map((s) => (
+            <Link key={s.slug} to="/hadits" search={{ sign: s.slug }}
               onMouseEnter={() => setHover(s.slug)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(s.slug)} onBlur={() => setHover(null)}
               className="group absolute -translate-x-1/2 -translate-y-1/2 p-3" style={{ left: `${s.x}%`, top: `${s.y}%` }}>
               <span className={`block rounded-full transition-transform duration-500 group-hover:scale-150 ${nodeStyle[s.status]}`} />
@@ -110,6 +134,9 @@ export function SignMap() {
                 <span className="glass animate-fade-up absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-xl bg-card/90 p-3 text-left" style={{ animationDuration: ".5s" }}>
                   <span className="block text-sm font-medium text-foreground">{s.name[lang]}</span>
                   <span className="mt-1 block text-xs text-muted-foreground">{s.summary[lang]}</span>
+                  {typeof s.count === "number" && (
+                    <span className="mt-2 block text-[11px] text-dawn">{s.count} {t.hadith.hadithCount}</span>
+                  )}
                   <span className="mt-2 block"><StatusBadge status={s.status} /></span>
                 </span>
               )}
