@@ -14,6 +14,7 @@ import { Route as DukungRouteImport } from './routes/dukung'
 import { Route as HaditsRouteImport } from './routes/hadits'
 import { Route as KabarRouteImport } from './routes/kabar'
 import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as HaditsCodeRouteImport } from './routes/hadits_.$code'
 import { Route as HaditsSlugRouteImport } from './routes/hadits_.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const TimelineRoute = TimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HaditsCodeRoute = HaditsCodeRouteImport.update({
+  id: '/hadits_/$code',
+  path: '/hadits/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HaditsSlugRoute = HaditsSlugRouteImport.update({
   id: '/hadits_/$slug',
   path: '/hadits/$slug',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/hadits/$code': typeof HaditsCodeRoute
   '/hadits/$slug': typeof HaditsSlugRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/hadits/$code': typeof HaditsCodeRoute
   '/hadits/$slug': typeof HaditsSlugRoute
 }
 export interface FileRoutesById {
@@ -70,14 +78,28 @@ export interface FileRoutesById {
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/hadits_/$code': typeof HaditsCodeRoute
   '/hadits_/$slug': typeof HaditsSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/dukung' | '/hadits' | '/kabar' | '/timeline' | '/hadits/$slug'
+    | '/'
+    | '/dukung'
+    | '/hadits'
+    | '/kabar'
+    | '/timeline'
+    | '/hadits/$code'
+    | '/hadits/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dukung' | '/hadits' | '/kabar' | '/timeline' | '/hadits/$slug'
+  to:
+    | '/'
+    | '/dukung'
+    | '/hadits'
+    | '/kabar'
+    | '/timeline'
+    | '/hadits/$code'
+    | '/hadits/$slug'
   id:
     | '__root__'
     | '/'
@@ -85,6 +107,7 @@ export interface FileRouteTypes {
     | '/hadits'
     | '/kabar'
     | '/timeline'
+    | '/hadits_/$code'
     | '/hadits_/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -94,6 +117,7 @@ export interface RootRouteChildren {
   HaditsRoute: typeof HaditsRoute
   KabarRoute: typeof KabarRoute
   TimelineRoute: typeof TimelineRoute
+  HaditsCodeRoute: typeof HaditsCodeRoute
   HaditsSlugRoute: typeof HaditsSlugRoute
 }
 
@@ -134,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TimelineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hadits_/$code': {
+      id: '/hadits_/$code'
+      path: '/hadits/$code'
+      fullPath: '/hadits/$code'
+      preLoaderRoute: typeof HaditsCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hadits_/$slug': {
       id: '/hadits_/$slug'
       path: '/hadits/$slug'
@@ -150,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   HaditsRoute: HaditsRoute,
   KabarRoute: KabarRoute,
   TimelineRoute: TimelineRoute,
+  HaditsCodeRoute: HaditsCodeRoute,
   HaditsSlugRoute: HaditsSlugRoute,
 }
 export const routeTree = rootRouteImport
