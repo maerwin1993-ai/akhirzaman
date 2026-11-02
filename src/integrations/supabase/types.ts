@@ -14,16 +14,204 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      hadiths: {
+        Row: {
+          bab: string | null
+          code: string
+          created_at: string
+          derajat: string | null
+          id: string
+          is_published: boolean
+          jenis: string | null
+          kategori: Database["public"]["Enums"]["tanda_kategori"] | null
+          kitab: string | null
+          link_sumber: string | null
+          matan_ringkas_en: string | null
+          matan_ringkas_id: string | null
+          nomor: string | null
+          penilai_derajat: string | null
+          rujukan_syarah: string | null
+          status: Database["public"]["Enums"]["hadith_status"] | null
+          syarah_ringkas: string | null
+          teks_arab: string
+          tema: string | null
+          terjemah_en: string | null
+          terjemah_id: string | null
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          bab?: string | null
+          code: string
+          created_at?: string
+          derajat?: string | null
+          id?: string
+          is_published?: boolean
+          jenis?: string | null
+          kategori?: Database["public"]["Enums"]["tanda_kategori"] | null
+          kitab?: string | null
+          link_sumber?: string | null
+          matan_ringkas_en?: string | null
+          matan_ringkas_id?: string | null
+          nomor?: string | null
+          penilai_derajat?: string | null
+          rujukan_syarah?: string | null
+          status?: Database["public"]["Enums"]["hadith_status"] | null
+          syarah_ringkas?: string | null
+          teks_arab: string
+          tema?: string | null
+          terjemah_en?: string | null
+          terjemah_id?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          bab?: string | null
+          code?: string
+          created_at?: string
+          derajat?: string | null
+          id?: string
+          is_published?: boolean
+          jenis?: string | null
+          kategori?: Database["public"]["Enums"]["tanda_kategori"] | null
+          kitab?: string | null
+          link_sumber?: string | null
+          matan_ringkas_en?: string | null
+          matan_ringkas_id?: string | null
+          nomor?: string | null
+          penilai_derajat?: string | null
+          rujukan_syarah?: string | null
+          status?: Database["public"]["Enums"]["hadith_status"] | null
+          syarah_ringkas?: string | null
+          teks_arab?: string
+          tema?: string | null
+          terjemah_en?: string | null
+          terjemah_id?: string | null
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
+      sign_hadiths: {
+        Row: {
+          created_at: string
+          hadith_id: string
+          sign_id: string
+        }
+        Insert: {
+          created_at?: string
+          hadith_id: string
+          sign_id: string
+        }
+        Update: {
+          created_at?: string
+          hadith_id?: string
+          sign_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sign_hadiths_hadith_id_fkey"
+            columns: ["hadith_id"]
+            isOneToOne: false
+            referencedRelation: "hadiths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sign_hadiths_sign_id_fkey"
+            columns: ["sign_id"]
+            isOneToOne: false
+            referencedRelation: "signs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signs: {
+        Row: {
+          created_at: string
+          deskripsi_singkat: string | null
+          id: string
+          kategori: Database["public"]["Enums"]["tanda_kategori"] | null
+          nama: string
+          slug: string
+          status: Database["public"]["Enums"]["sign_status"]
+          updated_at: string
+          urutan: number
+        }
+        Insert: {
+          created_at?: string
+          deskripsi_singkat?: string | null
+          id?: string
+          kategori?: Database["public"]["Enums"]["tanda_kategori"] | null
+          nama: string
+          slug: string
+          status?: Database["public"]["Enums"]["sign_status"]
+          updated_at?: string
+          urutan?: number
+        }
+        Update: {
+          created_at?: string
+          deskripsi_singkat?: string | null
+          id?: string
+          kategori?: Database["public"]["Enums"]["tanda_kategori"] | null
+          nama?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["sign_status"]
+          updated_at?: string
+          urutan?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "reviewer"
+      hadith_status:
+        | "sudah_terjadi"
+        | "sedang_berlangsung"
+        | "belum_terjadi"
+        | "tidak_berlaku"
+      sign_status: "sudah_terjadi" | "sedang_berlangsung" | "belum_terjadi"
+      tanda_kategori:
+        | "tanda_kecil"
+        | "tanda_besar"
+        | "fitnah"
+        | "akhirat"
+        | "umum"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +338,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "reviewer"],
+      hadith_status: [
+        "sudah_terjadi",
+        "sedang_berlangsung",
+        "belum_terjadi",
+        "tidak_berlaku",
+      ],
+      sign_status: ["sudah_terjadi", "sedang_berlangsung", "belum_terjadi"],
+      tanda_kategori: [
+        "tanda_kecil",
+        "tanda_besar",
+        "fitnah",
+        "akhirat",
+        "umum",
+      ],
+    },
   },
 } as const
