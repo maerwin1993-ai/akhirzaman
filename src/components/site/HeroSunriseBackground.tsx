@@ -43,7 +43,7 @@ export function HeroSunriseBackground() {
         aria-hidden="true"
         fetchPriority="high"
         loading="eager"
-        className="hero-sunrise pointer-events-none absolute inset-0 h-full w-full object-cover object-bottom opacity-50 mix-blend-screen"
+        className="hero-sunrise pointer-events-none absolute inset-0 h-full w-full object-cover object-bottom opacity-[0.82] mix-blend-screen"
       />
       <div className="hero-readability pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="hero-bottom-fade pointer-events-none absolute inset-0" aria-hidden="true" />
