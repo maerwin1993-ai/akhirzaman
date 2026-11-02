@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { cleanSearch } from "./hadith-search";
 
-type SignRow = Database["public"]["Tables"]["signs"]["Row"];
+type SignRow = Pick<
+  Database["public"]["Tables"]["signs"]["Row"],
+  "id" | "slug" | "nama" | "deskripsi_singkat" | "kategori" | "status" | "urutan"
+>;
 
 export const KATEGORI = ["tanda_kecil", "tanda_besar", "fitnah", "akhirat", "umum"] as const;
 export const HADITH_STATUS = ["sudah_terjadi", "sedang_berlangsung", "belum_terjadi", "tidak_berlaku"] as const;
@@ -13,6 +17,8 @@ export type HadithListItem = {
   teks_arab: string;
   matan_ringkas_id: string | null;
   matan_ringkas_en: string | null;
+  terjemah_id: string | null;
+  terjemah_en: string | null;
   status: string | null;
   kategori: string | null;
   derajat: string | null;
@@ -64,7 +70,7 @@ export type ListInput = {
 };
 
 const LIST_COLS =
-  "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, status, kategori, derajat, kitab, nomor";
+  "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, terjemah_id, terjemah_en, status, kategori, derajat, kitab, nomor";
 
 const DETAIL_COLS =
   "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, status, kategori, derajat, kitab, nomor, bab, jenis, penilai_derajat, terjemah_id, terjemah_en, syarah_ringkas, rujukan_syarah, link_sumber, verified_by, verified_at";
@@ -101,10 +107,6 @@ function publicClient() {
   });
 }
 
-/** PostgREST or-clauses split on commas, so those characters are stripped. */
-function cleanSearch(q: string): string {
-  return q.replace(/[,()%*"]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
-}
 
 async function hadithIdsForSign(slug: string): Promise<string[]> {
   const supabase = publicClient();
@@ -134,10 +136,10 @@ export const listHadiths = createServerFn({ method: "GET" })
       );
     }
     if (data.kategori && (KATEGORI as readonly string[]).includes(data.kategori)) {
-      query = query.eq("kategori", data.kategori);
+      query = query.eq("kategori", data.kategori as Database["public"]["Enums"]["tanda_kategori"]);
     }
     if (data.status && (HADITH_STATUS as readonly string[]).includes(data.status)) {
-      query = query.eq("status", data.status);
+      query = query.eq("status", data.status as Database["public"]["Enums"]["hadith_status"]);
     }
     if (data.kitab) query = query.eq("kitab", data.kitab);
 
@@ -210,37 +212,43 @@ export const hadithByCode = createServerFn({ method: "GET" })
   });
 
 export const homeHadithData = createServerFn({ method: "GET" }).handler(async (): Promise<HomeData> => {
-  const supabase = publicClient();
+  try {
+    const supabase = publicClient();
 
-  const [featuredRes, signsRes, linksRes, publishedRes] = await Promise.all([
-    supabase.from("hadiths").select(LIST_COLS).order("code", { ascending: true }).limit(1),
-    supabase
-      .from("signs")
-      .select("id, slug, nama, deskripsi_singkat, kategori, status, urutan")
-      .order("urutan", { ascending: true })
-      .limit(200),
-    supabase.from("sign_hadiths").select("sign_id, hadith_id").limit(5000),
-    supabase.from("hadiths").select("id").limit(1000),
-  ]);
+    const [featuredRes, signsRes, linksRes, publishedRes] = await Promise.all([
+      supabase.from("hadiths").select(LIST_COLS).order("code", { ascending: true }).limit(1),
+      supabase
+        .from("signs")
+        .select("id, slug, nama, deskripsi_singkat, kategori, status, urutan")
+        .order("urutan", { ascending: true })
+        .limit(200),
+      supabase.from("sign_hadiths").select("sign_id, hadith_id").limit(5000),
+      supabase.from("hadiths").select("id").limit(1000),
+    ]);
 
-  const featured = (featuredRes.data ?? [])[0] ?? null;
-  const published = new Set((publishedRes.data ?? []).map((r) => r.id));
+    const featured = (featuredRes.data ?? [])[0] ?? null;
+    const published = new Set((publishedRes.data ?? []).map((r) => r.id));
 
-  const counts = new Map<string, number>();
-  for (const link of linksRes.data ?? []) {
-    if (!published.has(link.hadith_id)) continue;
-    counts.set(link.sign_id, (counts.get(link.sign_id) ?? 0) + 1);
+    const counts = new Map<string, number>();
+    for (const link of linksRes.data ?? []) {
+      if (!published.has(link.hadith_id)) continue;
+      counts.set(link.sign_id, (counts.get(link.sign_id) ?? 0) + 1);
+    }
+
+    const signs: HomeSign[] = (signsRes.data ?? []).map((s: SignRow) => ({
+      slug: s.slug,
+      nama: s.nama,
+      deskripsi_singkat: s.deskripsi_singkat,
+      kategori: s.kategori,
+      status: s.status,
+      urutan: s.urutan,
+      hadithCount: counts.get(s.id) ?? 0,
+    }));
+
+    return { featured, signs };
+  } catch {
+    // Home keeps working with its built-in placeholder map when the
+    // database cannot be reached.
+    return { featured: null, signs: [] };
   }
-
-  const signs: HomeSign[] = (signsRes.data ?? []).map((s: SignRow) => ({
-    slug: s.slug,
-    nama: s.nama,
-    deskripsi_singkat: s.deskripsi_singkat,
-    kategori: s.kategori,
-    status: s.status,
-    urutan: s.urutan,
-    hadithCount: counts.get(s.id) ?? 0,
-  }));
-
-  return { featured, signs };
 });

@@ -1,8 +1,12 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CalendarDays, ChevronDown, HandHeart, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type L10n } from "@/lib/i18n";
 import { signs, timeline, type SignStatus } from "@/lib/data";
+import { homeHadithQuery } from "@/lib/hadiths.queries";
+import { mapSignStatus, signPosition } from "@/lib/sign-layout";
+import { HadithStatusBadge } from "./HadithStatusBadge";
 import { ShaderBackground } from "./ShaderBackground";
 import { HeroSunriseBackground } from "./HeroSunriseBackground";
 import { StatusBadge } from "./StatusBadge";
@@ -29,6 +33,19 @@ function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
 
 export function Hero() {
   const { t, lang } = useI18n();
+  const { data } = useSuspenseQuery(homeHadithQuery);
+  const featured = data.featured;
+  const translation =
+    (featured
+      ? (lang === "id" ? featured.terjemah_id : featured.terjemah_en) ??
+        featured.matan_ringkas_id ??
+        featured.matan_ringkas_en
+      : lang === "id"
+        ? "“[DUMMY] Tidak akan terjadi kiamat hingga muncul sepuluh tanda …”"
+        : "“[DUMMY] The Hour will not come until ten signs appear …”") ?? "";
+  const source = featured
+    ? `${featured.kitab ?? ""}${featured.nomor ? ` no. ${featured.nomor}` : ""}`
+    : "[DUMMY] HR. Muslim no. 2901";
   return (
     <section className="hero-home relative isolate flex items-center overflow-hidden">
       <ShaderBackground />
@@ -52,13 +69,13 @@ export function Hero() {
         <article className="hero-hadith animate-fade-up p-6" style={{ animationDelay: "1.9s" }}>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t.hero.featured}</span>
-            <StatusBadge status="future" />
+            {featured ? <HadithStatusBadge status={featured.status} /> : <StatusBadge status="future" />}
           </div>
-          <p className="arabic mt-6 text-3xl sm:text-4xl">لَا تَقُومُ السَّاعَةُ حَتَّى تَكُونَ عَشْرُ آيَاتٍ …</p>
-          <p className="font-display mt-6 text-xl italic">
-            {lang === "id" ? "“[DUMMY] Tidak akan terjadi kiamat hingga muncul sepuluh tanda …”" : "“[DUMMY] The Hour will not come until ten signs appear …”"}
+          <p className="arabic mt-6 line-clamp-4 text-3xl sm:text-4xl" dir="rtl">
+            {featured?.teks_arab ?? "لَا تَقُومُ السَّاعَةُ حَتَّى تَكُونُ عَشْرُ آيَاتٍ …"}
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">[DUMMY] HR. Muslim no. 2901</p>
+          <p className="font-display mt-6 text-xl italic">{translation}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{source}</p>
         </article>
       </div>
       <ChevronDown className="absolute bottom-8 left-1/2 h-6 w-6 -translate-x-1/2 text-muted-foreground" />
@@ -72,9 +89,33 @@ const nodeStyle: Record<SignStatus, string> = {
   future: "h-3 w-3 border border-mist bg-background",
 };
 
+type MapNode = {
+  slug: string;
+  name: L10n;
+  summary: L10n;
+  status: SignStatus;
+  x: number;
+  y: number;
+  count?: number;
+};
+
 export function SignMap() {
   const { t, lang } = useI18n();
   const [hover, setHover] = useState<string | null>(null);
+  const { data } = useSuspenseQuery(homeHadithQuery);
+
+  const nodes: MapNode[] =
+    data.signs.length > 0
+      ? data.signs.map((s, i) => ({
+          slug: s.slug,
+          name: { id: s.nama, en: s.nama },
+          summary: { id: s.deskripsi_singkat ?? "", en: s.deskripsi_singkat ?? "" },
+          status: mapSignStatus(s.status),
+          count: s.hadithCount,
+          ...signPosition(i, data.signs.length),
+        }))
+      : signs.map((s) => ({ ...s }));
+
   return (
     <section className="mx-auto max-w-7xl px-5 py-24">
       <div className="grid gap-10 lg:grid-cols-[1fr_2.2fr] lg:items-center">
@@ -90,14 +131,14 @@ export function SignMap() {
         </div>
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-[radial-gradient(ellipse_at_60%_120%,var(--dusk),transparent_60%)]">
           <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-            {signs.slice(1).map((s, i) => {
-              const p = signs[i]!;
+            {nodes.slice(1).map((s, i) => {
+              const p = nodes[i]!;
               return <line key={s.slug} x1={p.x} y1={p.y} x2={s.x} y2={s.y} vectorEffect="non-scaling-stroke"
                 stroke="var(--bone)" strokeOpacity={s.status === "future" ? 0.15 : 0.4} strokeWidth="1" strokeDasharray={s.status === "future" ? "3 4" : undefined} />;
             })}
           </svg>
-          {signs.map((s) => (
-            <Link key={s.slug} to="/hadits/$slug" params={{ slug: s.slug }}
+          {nodes.map((s) => (
+            <Link key={s.slug} to="/hadits" search={{ sign: s.slug }}
               onMouseEnter={() => setHover(s.slug)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(s.slug)} onBlur={() => setHover(null)}
               className="group absolute -translate-x-1/2 -translate-y-1/2 p-3" style={{ left: `${s.x}%`, top: `${s.y}%` }}>
               <span className={`block rounded-full transition-transform duration-500 group-hover:scale-150 ${nodeStyle[s.status]}`} />
@@ -106,6 +147,9 @@ export function SignMap() {
                 <span className="glass animate-fade-up absolute bottom-full left-1/2 z-10 mb-2 w-56 -translate-x-1/2 rounded-xl bg-card/90 p-3 text-left" style={{ animationDuration: ".5s" }}>
                   <span className="block text-sm font-medium text-foreground">{s.name[lang]}</span>
                   <span className="mt-1 block text-xs text-muted-foreground">{s.summary[lang]}</span>
+                  {typeof s.count === "number" && (
+                    <span className="mt-2 block text-[11px] text-dawn">{s.count} {t.hadith.hadithCount}</span>
+                  )}
                   <span className="mt-2 block"><StatusBadge status={s.status} /></span>
                 </span>
               )}
