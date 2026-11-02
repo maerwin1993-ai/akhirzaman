@@ -30,14 +30,14 @@ function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
 export function Hero() {
   const { t, lang } = useI18n();
   return (
-    <section className="hero-home relative isolate flex min-h-[100svh] items-center overflow-hidden">
+    <section className="hero-home relative isolate flex items-center overflow-hidden">
       <ShaderBackground />
       <HeroSunriseBackground />
-      <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-5 pb-24 pt-32 lg:grid-cols-[1.15fr_1fr] lg:items-center">
+      <div className="hero-content relative mx-auto grid w-full max-w-7xl gap-10 px-5 pb-36 pt-32 md:grid-cols-[1.15fr_1fr] md:items-center">
         <div>
           <p className="animate-fade-up text-xs uppercase tracking-[0.3em] text-muted-foreground">{t.hero.eyebrow}</p>
-          <h1 key={lang} className="font-display mt-6 text-5xl leading-[0.95] sm:text-7xl lg:text-8xl">
-            <RevealText text={t.hero.title} delay={200} /> <span className="arabic align-super text-[0.35em] text-dawn">ﷺ</span>
+          <h1 key={lang} className="hero-title mt-4">
+            {lang === "id" ? <><span className="block"><RevealText text="Kabar dari" delay={200} /></span><span className="block"><RevealText text="Sabda Nabi" delay={400} /> <span className="arabic hero-salawat">ﷺ</span></span></> : <><RevealText text={t.hero.title} delay={200} /> <span className="arabic hero-salawat">ﷺ</span></>}
           </h1>
           <p className="animate-fade-up mt-6 max-w-xl text-base text-muted-foreground sm:text-lg" style={{ animationDelay: "1.2s" }}>{t.hero.subtitle}</p>
           <div className="animate-fade-up mt-10 flex flex-wrap gap-3" style={{ animationDelay: "1.6s" }}>
@@ -49,7 +49,7 @@ export function Hero() {
             </Link>
           </div>
         </div>
-        <article className="hero-hadith glass animate-fade-up shadow-card rounded-2xl p-8" style={{ animationDelay: "1.9s" }}>
+        <article className="hero-hadith animate-fade-up p-6" style={{ animationDelay: "1.9s" }}>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t.hero.featured}</span>
             <StatusBadge status="future" />

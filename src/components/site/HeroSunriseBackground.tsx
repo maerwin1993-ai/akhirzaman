@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import sunrise from "@/assets/orbital-sunrise.webp.asset.json";
+import sunrise from "@/assets/earth-sunrise-reference.webp";
 
 export function HeroSunriseBackground() {
   const ref = useRef<HTMLImageElement>(null);
@@ -36,14 +36,14 @@ export function HeroSunriseBackground() {
     <>
       <img
         ref={ref}
-        src={sunrise.url}
+        src={sunrise}
         width={1920}
-        height={1081}
+        height={960}
         alt=""
         aria-hidden="true"
         fetchPriority="high"
         loading="eager"
-        className="hero-sunrise pointer-events-none absolute inset-0 h-full w-full object-cover object-bottom opacity-[0.82] mix-blend-screen"
+        className="hero-sunrise pointer-events-none absolute inset-0 h-full w-full object-cover mix-blend-screen"
       />
       <div className="hero-readability pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="hero-bottom-fade pointer-events-none absolute inset-0" aria-hidden="true" />

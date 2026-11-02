@@ -80,21 +80,39 @@
   --gradient-card: linear-gradient(160deg, oklch(0.93 0.015 80 / 7%), oklch(0.93 0.015 80 / 2%));
   --shadow-glow: 0 0 24px 4px color-mix(in oklab, var(--dawn) 45%, transparent);
   --shadow-card: 0 30px 60px -30px oklch(0 0 0 / 70%);
-  --hero-shading: linear-gradient(90deg, color-mix(in oklab, var(--ink) 58%, transparent), color-mix(in oklab, var(--ink) 18%, transparent) 55%, transparent), linear-gradient(180deg, color-mix(in oklab, var(--ink) 40%, transparent), transparent 55%);
-  --hero-bottom-fade: linear-gradient(180deg, transparent 74%, color-mix(in oklab, var(--ink) 42%, transparent) 91%, var(--ink) 100%);
+  --hero-shading: linear-gradient(90deg, color-mix(in oklab, var(--ink) 38%, transparent), color-mix(in oklab, var(--ink) 8%, transparent) 55%, transparent), linear-gradient(180deg, color-mix(in oklab, var(--ink) 25%, transparent), transparent 55%);
+  --hero-bottom-fade: linear-gradient(180deg, transparent 82%, color-mix(in oklab, var(--ink) 35%, transparent) 94%, var(--ink) 100%);
   --hero-card-surface: color-mix(in oklab, var(--graphite) 82%, transparent);
   --hero-secondary-text: color-mix(in oklab, var(--bone) 80%, var(--mist));
 }
 
 .hero-sunrise {
+  object-position: 78% bottom;
+  opacity: 1;
   transform: translateY(var(--hero-drift, 0%)) scale(1.025);
   transform-origin: center bottom;
   will-change: transform;
 }
 .hero-readability { background: var(--hero-shading); }
 .hero-bottom-fade { background: var(--hero-bottom-fade); }
-.hero-home .hero-hadith { background: var(--hero-card-surface); }
+.hero-home { min-height: 680px; }
+.hero-title { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 44px; line-height: 1.02; letter-spacing: 0; }
+.hero-salawat { display: inline-block; font-size: 0.36em; vertical-align: middle; color: var(--bone); }
+.hero-home .hero-hadith { border-left: 1px solid var(--input); background: transparent; box-shadow: none; backdrop-filter: none; }
 .hero-home .text-muted-foreground { color: var(--hero-secondary-text); }
+@media (min-width: 768px) {
+  .hero-home { min-height: 620px; }
+  .hero-title { font-size: 54px; }
+  .hero-content { padding-bottom: 160px; }
+}
+@media (min-width: 1024px) {
+  .hero-home { min-height: 680px; }
+  .hero-title { font-size: 72px; }
+}
+@media (max-width: 767px) {
+  .hero-home .hero-hadith { background: var(--hero-card-surface); border-left: 2px solid var(--input); }
+  .hero-content { padding-bottom: 200px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hero-sunrise { transform: none; will-change: auto; }
