@@ -80,8 +80,8 @@
   --gradient-card: linear-gradient(160deg, oklch(0.93 0.015 80 / 7%), oklch(0.93 0.015 80 / 2%));
   --shadow-glow: 0 0 24px 4px color-mix(in oklab, var(--dawn) 45%, transparent);
   --shadow-card: 0 30px 60px -30px oklch(0 0 0 / 70%);
-  --hero-shading: linear-gradient(90deg, color-mix(in oklab, var(--ink) 88%, transparent), color-mix(in oklab, var(--ink) 40%, transparent) 55%, transparent), linear-gradient(180deg, color-mix(in oklab, var(--ink) 78%, transparent), transparent 65%);
-  --hero-bottom-fade: linear-gradient(180deg, transparent 66%, color-mix(in oklab, var(--ink) 55%, transparent) 86%, var(--ink) 100%);
+  --hero-shading: linear-gradient(90deg, color-mix(in oklab, var(--ink) 58%, transparent), color-mix(in oklab, var(--ink) 18%, transparent) 55%, transparent), linear-gradient(180deg, color-mix(in oklab, var(--ink) 40%, transparent), transparent 55%);
+  --hero-bottom-fade: linear-gradient(180deg, transparent 74%, color-mix(in oklab, var(--ink) 42%, transparent) 91%, var(--ink) 100%);
   --hero-card-surface: color-mix(in oklab, var(--graphite) 82%, transparent);
   --hero-secondary-text: color-mix(in oklab, var(--bone) 80%, var(--mist));
 }
