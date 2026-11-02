@@ -24,8 +24,25 @@ export const Route = createFileRoute("/")({
   }),
   component: Index,
   errorComponent: HomeError,
-  notFoundComponent: HomeError,
+  notFoundComponent: HomeUnavailable,
 });
+
+function HomeUnavailable() {
+  const { t } = useI18n();
+  const router = useRouter();
+  return (
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-5 text-center">
+      <h1 className="font-display text-3xl">{t.hadith.errorTitle}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t.hadith.errorDesc}</p>
+      <button
+        onClick={() => router.invalidate()}
+        className="mt-7 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:shadow-glow"
+      >
+        {t.hadith.retry}
+      </button>
+    </div>
+  );
+}
 
 function HomeError({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();

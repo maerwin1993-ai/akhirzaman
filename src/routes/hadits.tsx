@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   createFileRoute,
@@ -16,38 +16,40 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DerajatBadge, HadithStatusBadge } from "@/components/site/HadithStatusBadge";
-import { HADITH_STATUS, KATEGORI } from "@/lib/hadiths.functions";
+import { HADITH_STATUS, KATEGORI, type ListInput } from "@/lib/hadiths.functions";
 import { hadithKitabQuery, hadithListQuery } from "@/lib/hadiths.queries";
 import { useI18n } from "@/lib/i18n";
 
 type HadithSearch = {
-  q: string;
-  kategori: string;
-  status: string;
-  kitab: string;
-  sign: string;
-  page: number;
+  q?: string;
+  kategori?: string;
+  status?: string;
+  kitab?: string;
+  sign?: string;
+  page?: number;
 };
 
 const asStr = (v: unknown) => (typeof v === "string" ? v : "");
 
+const normalize = (s: HadithSearch): ListInput => ({
+  q: s.q ?? "",
+  kategori: s.kategori ?? "",
+  status: s.status ?? "",
+  kitab: s.kitab ?? "",
+  sign: s.sign ?? "",
+  page: s.page ?? 1,
+});
+
 export const Route = createFileRoute("/hadits")({
   validateSearch: (search: Record<string, unknown>): HadithSearch => ({
-    q: asStr(search.q).slice(0, 120),
-    kategori: asStr(search.kategori),
-    status: asStr(search.status),
-    kitab: asStr(search.kitab),
-    sign: asStr(search.sign),
-    page: Math.max(1, Math.floor(Number(search.page) || 1)),
+    q: asStr(search["q"]).slice(0, 120),
+    kategori: asStr(search["kategori"]),
+    status: asStr(search["status"]),
+    kitab: asStr(search["kitab"]),
+    sign: asStr(search["sign"]),
+    page: Math.max(1, Math.floor(Number(search["page"]) || 1)),
   }),
-  loaderDeps: ({ search }) => ({
-    q: search.q,
-    kategori: search.kategori,
-    status: search.status,
-    kitab: search.kitab,
-    sign: search.sign,
-    page: search.page,
-  }),
+  loaderDeps: ({ search }) => normalize(search),
   loader: ({ context, deps }) =>
     Promise.all([
       context.queryClient.ensureQueryData(hadithListQuery(deps)),
@@ -73,8 +75,26 @@ export const Route = createFileRoute("/hadits")({
   }),
   component: HadithLibrary,
   errorComponent: HadithListError,
-  notFoundComponent: HadithListError,
+  notFoundComponent: HadithListUnavailable,
 });
+
+function HadithListUnavailable() {
+  const { t } = useI18n();
+  const router = useRouter();
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-5 text-center">
+      <BookOpen className="h-10 w-10 text-dawn" strokeWidth={1.5} />
+      <h1 className="font-display mt-5 text-3xl">{t.hadith.errorTitle}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t.hadith.errorDesc}</p>
+      <button
+        onClick={() => router.invalidate()}
+        className="mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:shadow-glow"
+      >
+        {t.hadith.retry}
+      </button>
+    </div>
+  );
+}
 
 function HadithListError({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();
@@ -150,20 +170,18 @@ function ChipRow({
   onSelect: (v: string) => void;
 }) {
   const { t } = useI18n();
+  const chip = (active: boolean) =>
+    `rounded-full border px-3 py-1 text-xs transition-colors ${
+      active
+        ? "border-dawn bg-dawn text-ink"
+        : "border-border text-muted-foreground hover:border-dawn/60 hover:text-foreground"
+    }`;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="w-20 shrink-0 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </span>
-      <button
-        type="button"
-        onClick={() => onSelect("")}
-        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-          value === ""
-            ? "border-dawn bg-dawn text-ink"
-            : "border-border text-muted-foreground hover:border-dawn/60 hover:text-foreground"
-        }`}
-      >
+      <button type="button" onClick={() => onSelect("")} className={chip(value === "")}>
         {t.hadith.all}
       </button>
       {options.map((o) => (
@@ -171,11 +189,7 @@ function ChipRow({
           key={o.value}
           type="button"
           onClick={() => onSelect(value === o.value ? "" : o.value)}
-          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-            value === o.value
-              ? "border-dawn bg-dawn text-ink"
-              : "border-border text-muted-foreground hover:border-dawn/60 hover:text-foreground"
-          }`}
+          className={chip(value === o.value)}
         >
           {o.label}
         </button>
@@ -192,22 +206,35 @@ function pageWindow(current: number, total: number): number[] {
   return out;
 }
 
+function SkeletonGrid() {
+  return (
+    <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <li key={i} className="glass h-56 animate-pulse rounded-2xl" />
+      ))}
+    </ul>
+  );
+}
+
 function HadithLibrary() {
   const { t, lang } = useI18n();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/hadits" });
-  const queryClient = useQueryClient();
-  const { data, isPlaceholderData, isFetching } = useSuspenseQuery(hadithListQuery(search));
-  const { data: kitabOptions } = useSuspenseQuery(hadithKitabQuery);
+  const input = normalize(search);
+  const { data, isPlaceholderData, isFetching } = useQuery(hadithListQuery(input));
+  const { data: kitabOptions } = useQuery(hadithKitabQuery);
 
   const setParams = (patch: Partial<HadithSearch>) =>
+    navigate({ search: (prev) => ({ ...prev, page: 1, ...patch }), replace: true });
+
+  const clearAll = () =>
     navigate({
-      search: (prev) => ({ ...prev, page: 1, ...patch }),
+      search: { q: "", kategori: "", status: "", kitab: "", sign: "", page: 1 },
       replace: true,
     });
 
-  const hasFilters = Boolean(search.q || search.kategori || search.status || search.kitab || search.sign);
-  const signLabel = search.sign ? search.sign.replace(/[-_]/g, " ") : "";
+  const hasFilters = Boolean(input.q || input.kategori || input.status || input.kitab || input.sign);
+  const signLabel = input.sign ? input.sign.replace(/[-_]/g, " ") : "";
 
   const kategoriOptions = KATEGORI.map((k) => ({
     value: k,
@@ -217,7 +244,7 @@ function HadithLibrary() {
     value: s,
     label: t.hadith.status[s as keyof typeof t.hadith.status],
   }));
-  const kitabItems = kitabOptions.map((k) => ({ value: k, label: k }));
+  const kitabItems = (kitabOptions ?? []).map((k) => ({ value: k, label: k }));
 
   return (
     <div className="mx-auto max-w-7xl px-5 pb-24 pt-32">
@@ -229,24 +256,24 @@ function HadithLibrary() {
 
       <div className="mt-9 grid gap-5 lg:grid-cols-[1fr_1.4fr] lg:items-start">
         <div className="glass grid gap-4 rounded-2xl p-5">
-          <SearchBox value={search.q} onSubmit={(q) => setParams({ q })} />
+          <SearchBox value={input.q ?? ""} onSubmit={(q) => setParams({ q })} />
           <ChipRow
             label={t.hadith.byKategori}
             options={kategoriOptions}
-            value={search.kategori}
+            value={input.kategori ?? ""}
             onSelect={(kategori) => setParams({ kategori })}
           />
           <ChipRow
             label={t.hadith.byStatus}
             options={statusOptions}
-            value={search.status}
+            value={input.status ?? ""}
             onSelect={(status) => setParams({ status })}
           />
           {kitabItems.length > 0 && (
             <ChipRow
               label={t.hadith.byKitab}
               options={kitabItems}
-              value={search.kitab}
+              value={input.kitab ?? ""}
               onSelect={(kitab) => setParams({ kitab })}
             />
           )}
@@ -268,7 +295,7 @@ function HadithLibrary() {
           {hasFilters && (
             <button
               type="button"
-              onClick={() => navigate({ search: { q: "", kategori: "", status: "", kitab: "", sign: "", page: 1 }, replace: true })}
+              onClick={clearAll}
               className="justify-self-start text-xs text-muted-foreground underline-offset-4 hover:text-dawn hover:underline"
             >
               {t.hadith.clear}
@@ -279,14 +306,16 @@ function HadithLibrary() {
         <div>
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{data.total}</span> {t.hadith.found}
+              <span className="font-medium text-foreground">{data?.total ?? 0}</span> {t.hadith.found}
             </p>
             {(isPlaceholderData || isFetching) && (
               <p className="animate-soft-pulse text-xs text-dawn">{t.hadith.loading}</p>
             )}
           </div>
 
-          {data.items.length === 0 ? (
+          {!data ? (
+            <SkeletonGrid />
+          ) : data.items.length === 0 ? (
             <div className="glass mt-4 flex flex-col items-center rounded-2xl px-6 py-16 text-center">
               <Search className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
               <h2 className="font-display mt-4 text-2xl">{t.hadith.emptyTitle}</h2>
@@ -294,7 +323,7 @@ function HadithLibrary() {
               {hasFilters && (
                 <button
                   type="button"
-                  onClick={() => navigate({ search: { q: "", kategori: "", status: "", kitab: "", sign: "", page: 1 } })}
+                  onClick={clearAll}
                   className="mt-6 rounded-full border border-bone/30 px-5 py-2 text-sm transition-colors hover:bg-bone/10"
                 >
                   {t.hadith.clear}
@@ -338,7 +367,7 @@ function HadithLibrary() {
             </ul>
           )}
 
-          {data.pages > 1 && (
+          {data && data.pages > 1 && (
             <nav className="mt-8 flex flex-wrap items-center justify-center gap-2 text-sm">
               <button
                 type="button"
