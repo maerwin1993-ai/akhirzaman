@@ -12,7 +12,10 @@ export const getRouter = () => {
     defaultPreloadStaleTime: 0,
     // Hand the server-fetched query data to the browser so the first
     // client render matches the HTML the server sent.
-    dehydrate: () => ({ queryClient: dehydrate(queryClient) }),
+    dehydrate: () => {
+      const { queries } = dehydrate(queryClient);
+      return { queryClient: { queries: queries ?? [] } };
+    },
     hydrate: (dehydrated: { queryClient: ReturnType<typeof dehydrate> }) => {
       hydrate(queryClient, dehydrated.queryClient);
     },
