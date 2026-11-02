@@ -210,37 +210,43 @@ export const hadithByCode = createServerFn({ method: "GET" })
   });
 
 export const homeHadithData = createServerFn({ method: "GET" }).handler(async (): Promise<HomeData> => {
-  const supabase = publicClient();
+  try {
+    const supabase = publicClient();
 
-  const [featuredRes, signsRes, linksRes, publishedRes] = await Promise.all([
-    supabase.from("hadiths").select(LIST_COLS).order("code", { ascending: true }).limit(1),
-    supabase
-      .from("signs")
-      .select("id, slug, nama, deskripsi_singkat, kategori, status, urutan")
-      .order("urutan", { ascending: true })
-      .limit(200),
-    supabase.from("sign_hadiths").select("sign_id, hadith_id").limit(5000),
-    supabase.from("hadiths").select("id").limit(1000),
-  ]);
+    const [featuredRes, signsRes, linksRes, publishedRes] = await Promise.all([
+      supabase.from("hadiths").select(LIST_COLS).order("code", { ascending: true }).limit(1),
+      supabase
+        .from("signs")
+        .select("id, slug, nama, deskripsi_singkat, kategori, status, urutan")
+        .order("urutan", { ascending: true })
+        .limit(200),
+      supabase.from("sign_hadiths").select("sign_id, hadith_id").limit(5000),
+      supabase.from("hadiths").select("id").limit(1000),
+    ]);
 
-  const featured = (featuredRes.data ?? [])[0] ?? null;
-  const published = new Set((publishedRes.data ?? []).map((r) => r.id));
+    const featured = (featuredRes.data ?? [])[0] ?? null;
+    const published = new Set((publishedRes.data ?? []).map((r) => r.id));
 
-  const counts = new Map<string, number>();
-  for (const link of linksRes.data ?? []) {
-    if (!published.has(link.hadith_id)) continue;
-    counts.set(link.sign_id, (counts.get(link.sign_id) ?? 0) + 1);
+    const counts = new Map<string, number>();
+    for (const link of linksRes.data ?? []) {
+      if (!published.has(link.hadith_id)) continue;
+      counts.set(link.sign_id, (counts.get(link.sign_id) ?? 0) + 1);
+    }
+
+    const signs: HomeSign[] = (signsRes.data ?? []).map((s: SignRow) => ({
+      slug: s.slug,
+      nama: s.nama,
+      deskripsi_singkat: s.deskripsi_singkat,
+      kategori: s.kategori,
+      status: s.status,
+      urutan: s.urutan,
+      hadithCount: counts.get(s.id) ?? 0,
+    }));
+
+    return { featured, signs };
+  } catch {
+    // Home keeps working with its built-in placeholder map when the
+    // database cannot be reached.
+    return { featured: null, signs: [] };
   }
-
-  const signs: HomeSign[] = (signsRes.data ?? []).map((s: SignRow) => ({
-    slug: s.slug,
-    nama: s.nama,
-    deskripsi_singkat: s.deskripsi_singkat,
-    kategori: s.kategori,
-    status: s.status,
-    urutan: s.urutan,
-    hadithCount: counts.get(s.id) ?? 0,
-  }));
-
-  return { featured, signs };
 });

@@ -1,8 +1,12 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CalendarDays, ChevronDown, HandHeart, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type L10n } from "@/lib/i18n";
 import { signs, timeline, type SignStatus } from "@/lib/data";
+import { homeHadithQuery } from "@/lib/hadiths.queries";
+import { mapSignStatus, signPosition } from "@/lib/sign-layout";
+import { HadithStatusBadge } from "./HadithStatusBadge";
 import { ShaderBackground } from "./ShaderBackground";
 import { HeroSunriseBackground } from "./HeroSunriseBackground";
 import { StatusBadge } from "./StatusBadge";
