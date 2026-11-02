@@ -8,6 +8,8 @@ export const Route = createFileRoute("/kabar")({
       { title: "Kabar Terkini — akhirzaman.id" },
       { name: "description", content: "Kabar Terkini di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
       { property: "og:title", content: "Kabar Terkini — akhirzaman.id" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:description", content: "Kabar Terkini di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
     ],
   }),

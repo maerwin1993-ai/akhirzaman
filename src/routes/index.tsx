@@ -8,6 +8,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Platform edukasi hadits shahih tentang tanda-tanda akhir zaman dan relevansinya dengan kejadian dunia saat ini." },
       { property: "og:title", content: "akhirzaman.id — Kabar dari Sabda Nabi ﷺ" },
       { property: "og:description", content: "Hadits shahih tentang tanda-tanda akhir zaman, penjelasan ulama salaf, dan kabar terkini." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,

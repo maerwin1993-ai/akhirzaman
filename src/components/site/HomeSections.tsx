@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { signs, timeline, type SignStatus } from "@/lib/data";
 import { ShaderBackground } from "./ShaderBackground";
+import { HeroSunriseBackground } from "./HeroSunriseBackground";
 import { StatusBadge } from "./StatusBadge";
 import drought from "@/assets/news-drought.jpg";
 import economy from "@/assets/news-economy.jpg";
@@ -29,9 +30,9 @@ function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
 export function Hero() {
   const { t, lang } = useI18n();
   return (
-    <section className="relative flex min-h-[100svh] items-center overflow-hidden">
+    <section className="hero-home relative isolate flex min-h-[100svh] items-center overflow-hidden">
       <ShaderBackground />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background" />
+      <HeroSunriseBackground />
       <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-5 pb-24 pt-32 lg:grid-cols-[1.15fr_1fr] lg:items-center">
         <div>
           <p className="animate-fade-up text-xs uppercase tracking-[0.3em] text-muted-foreground">{t.hero.eyebrow}</p>
@@ -48,7 +49,7 @@ export function Hero() {
             </Link>
           </div>
         </div>
-        <article className="glass animate-fade-up shadow-card rounded-2xl p-8" style={{ animationDelay: "1.9s" }}>
+        <article className="hero-hadith glass animate-fade-up shadow-card rounded-2xl p-8" style={{ animationDelay: "1.9s" }}>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t.hero.featured}</span>
             <StatusBadge status="future" />
