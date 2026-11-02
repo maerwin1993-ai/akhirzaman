@@ -13,6 +13,8 @@ export const Route = createFileRoute("/hadits_/$slug")({
     meta: [
       { title: `${loaderData?.sign.name.id ?? "Tanda Kiamat"} — akhirzaman.id` },
       { name: "description", content: "Detail tanda kiamat berdasarkan hadits shahih." },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: `${loaderData?.sign.name.id ?? "Tanda Kiamat"} — akhirzaman.id` },
       { property: "og:description", content: "Detail tanda kiamat berdasarkan hadits shahih." },
     ],

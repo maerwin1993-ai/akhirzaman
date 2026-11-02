@@ -8,6 +8,8 @@ export const Route = createFileRoute("/dukung")({
       { title: "Dukung Kami — akhirzaman.id" },
       { name: "description", content: "Dukung Kami di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
       { property: "og:title", content: "Dukung Kami — akhirzaman.id" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:description", content: "Dukung Kami di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
     ],
   }),

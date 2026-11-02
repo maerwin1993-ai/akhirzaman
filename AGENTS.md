@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep Home's photographic background and scroll-motion lifecycle in a dedicated browser-safe component; this isolates its layers and cleanup from other Home sections.

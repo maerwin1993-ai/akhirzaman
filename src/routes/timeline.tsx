@@ -8,6 +8,8 @@ export const Route = createFileRoute("/timeline")({
       { title: "Timeline — akhirzaman.id" },
       { name: "description", content: "Timeline di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
       { property: "og:title", content: "Timeline — akhirzaman.id" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:description", content: "Timeline di akhirzaman.id, platform edukasi hadits shahih akhir zaman." },
     ],
   }),

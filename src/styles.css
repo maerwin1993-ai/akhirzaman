@@ -80,6 +80,24 @@
   --gradient-card: linear-gradient(160deg, oklch(0.93 0.015 80 / 7%), oklch(0.93 0.015 80 / 2%));
   --shadow-glow: 0 0 24px 4px color-mix(in oklab, var(--dawn) 45%, transparent);
   --shadow-card: 0 30px 60px -30px oklch(0 0 0 / 70%);
+  --hero-shading: linear-gradient(90deg, color-mix(in oklab, var(--ink) 88%, transparent), color-mix(in oklab, var(--ink) 40%, transparent) 55%, transparent), linear-gradient(180deg, color-mix(in oklab, var(--ink) 78%, transparent), transparent 65%);
+  --hero-bottom-fade: linear-gradient(180deg, transparent 66%, color-mix(in oklab, var(--ink) 55%, transparent) 86%, var(--ink) 100%);
+  --hero-card-surface: color-mix(in oklab, var(--graphite) 82%, transparent);
+  --hero-secondary-text: color-mix(in oklab, var(--bone) 80%, var(--mist));
+}
+
+.hero-sunrise {
+  transform: translateY(var(--hero-drift, 0%)) scale(1.025);
+  transform-origin: center bottom;
+  will-change: transform;
+}
+.hero-readability { background: var(--hero-shading); }
+.hero-bottom-fade { background: var(--hero-bottom-fade); }
+.hero-home .hero-hadith { background: var(--hero-card-surface); }
+.hero-home .text-muted-foreground { color: var(--hero-secondary-text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-sunrise { transform: none; will-change: auto; }
 }
 
 @layer base {
