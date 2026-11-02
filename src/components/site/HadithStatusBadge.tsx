@@ -2,6 +2,13 @@ import { cva } from "class-variance-authority";
 import { Check, Circle, Minus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
+type StatusKey =
+  | "sudah_terjadi"
+  | "sedang_berlangsung"
+  | "belum_terjadi"
+  | "tidak_berlaku"
+  | "unknown";
+
 const badge = cva("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium", {
   variants: {
     status: {
@@ -14,7 +21,7 @@ const badge = cva("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-
   },
 });
 
-const ICONS: Record<string, typeof Check> = {
+const ICONS: Record<StatusKey, typeof Check> = {
   sudah_terjadi: Check,
   sedang_berlangsung: Circle,
   belum_terjadi: Circle,
@@ -24,12 +31,13 @@ const ICONS: Record<string, typeof Check> = {
 
 export function HadithStatusBadge({ status }: { status: string | null }) {
   const { t } = useI18n();
-  const key = status && status in t.hadith.status ? status : "unknown";
-  const Icon = ICONS[key] ?? Minus;
+  const key: StatusKey =
+    status && status in t.hadith.status ? (status as StatusKey) : "unknown";
+  const Icon = ICONS[key];
   return (
     <span className={badge({ status: key })}>
       <Icon className={key === "sudah_terjadi" ? "h-3 w-3" : "h-2 w-2 fill-current"} />
-      {t.hadith.status[key as keyof typeof t.hadith.status] ?? t.hadith.status.unknown}
+      {t.hadith.status[key]}
     </span>
   );
 }
