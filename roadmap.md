@@ -22,6 +22,12 @@ Connection: external Supabase, ref `syjztybuacuszmxyrvgw` (already wired in `.en
 - [ ] `/admin/hadits`: table, search, filters, inline publish toggle, full edit form
 - [ ] `/admin/import`: CSV/XLSX upload, column mapping, preview + validation report (missing required, duplicate code), rows land unpublished
 
-## Handoff notes — open
-- [ ] First-admin SQL snippet for Supabase SQL editor
-- [ ] Tell user to enable email/password provider in Supabase dashboard
+## Handoff notes
+- [x] First-admin SQL snippet (run in Supabase SQL editor after creating your account):
+  ```sql
+  insert into public.user_roles (user_id, role)
+  select id, 'admin' from auth.users where email = 'email-anda@example.com';
+  ```
+- [ ] User must enable email/password provider: Supabase dashboard → Authentication → Providers → Email
+- [ ] Replace the three `[DUMMY]` hadiths and the nine seed signs with authentic imported content
+
