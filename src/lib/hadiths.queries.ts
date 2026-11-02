@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { notFound } from "@tanstack/react-router";
 import {
   hadithByCode,
   hadithKitabOptions,
@@ -23,7 +24,12 @@ export const hadithKitabQuery = queryOptions({
 export const hadithDetailQuery = (code: string) =>
   queryOptions({
     queryKey: ["hadiths", "detail", code],
-    queryFn: () => hadithByCode({ data: { code } }),
+    queryFn: async () => {
+      const detail = await hadithByCode({ data: { code } });
+      if (!detail) throw notFound();
+      return detail;
+    },
+    retry: false,
   });
 
 export const homeHadithQuery = queryOptions({
