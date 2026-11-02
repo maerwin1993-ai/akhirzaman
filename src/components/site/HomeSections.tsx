@@ -33,6 +33,19 @@ function RevealText({ text, delay = 0 }: { text: string; delay?: number }) {
 
 export function Hero() {
   const { t, lang } = useI18n();
+  const { data } = useSuspenseQuery(homeHadithQuery);
+  const featured = data.featured;
+  const translation =
+    (featured
+      ? (lang === "id" ? featured.terjemah_id : featured.terjemah_en) ??
+        featured.matan_ringkas_id ??
+        featured.matan_ringkas_en
+      : lang === "id"
+        ? "“[DUMMY] Tidak akan terjadi kiamat hingga muncul sepuluh tanda …”"
+        : "“[DUMMY] The Hour will not come until ten signs appear …”") ?? "";
+  const source = featured
+    ? `${featured.kitab ?? ""}${featured.nomor ? ` no. ${featured.nomor}` : ""}`
+    : "[DUMMY] HR. Muslim no. 2901";
   return (
     <section className="hero-home relative isolate flex items-center overflow-hidden">
       <ShaderBackground />
@@ -56,13 +69,13 @@ export function Hero() {
         <article className="hero-hadith animate-fade-up p-6" style={{ animationDelay: "1.9s" }}>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t.hero.featured}</span>
-            <StatusBadge status="future" />
+            {featured ? <HadithStatusBadge status={featured.status} /> : <StatusBadge status="future" />}
           </div>
-          <p className="arabic mt-6 text-3xl sm:text-4xl">لَا تَقُومُ السَّاعَةُ حَتَّى تَكُونَ عَشْرُ آيَاتٍ …</p>
-          <p className="font-display mt-6 text-xl italic">
-            {lang === "id" ? "“[DUMMY] Tidak akan terjadi kiamat hingga muncul sepuluh tanda …”" : "“[DUMMY] The Hour will not come until ten signs appear …”"}
+          <p className="arabic mt-6 line-clamp-4 text-3xl sm:text-4xl" dir="rtl">
+            {featured?.teks_arab ?? "لَا تَقُومُ السَّاعَةُ حَتَّى تَكُونُ عَشْرُ آيَاتٍ …"}
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">[DUMMY] HR. Muslim no. 2901</p>
+          <p className="font-display mt-6 text-xl italic">{translation}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{source}</p>
         </article>
       </div>
       <ChevronDown className="absolute bottom-8 left-1/2 h-6 w-6 -translate-x-1/2 text-muted-foreground" />
