@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { cleanSearch } from "./hadith-search";
 
 type SignRow = Pick<
   Database["public"]["Tables"]["signs"]["Row"],
@@ -106,10 +107,6 @@ function publicClient() {
   });
 }
 
-/** PostgREST or-clauses split on commas, so those characters are stripped. */
-export function cleanSearch(q: string): string {
-  return q.replace(/[,()%*"]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
-}
 
 async function hadithIdsForSign(slug: string): Promise<string[]> {
   const supabase = publicClient();

@@ -3,7 +3,7 @@ import { createRouter, rootRouteId } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
 import { routeTree } from "@/routeTree.gen";
-import { cleanSearch } from "@/lib/hadiths.functions";
+import { cleanSearch } from "@/lib/hadith-search";
 import { mapSignStatus, signPosition } from "@/lib/sign-layout";
 
 // The Home map and the hadith library read from Supabase, so the rules that
