@@ -2,7 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-type SignRow = Database["public"]["Tables"]["signs"]["Row"];
+type SignRow = Pick<
+  Database["public"]["Tables"]["signs"]["Row"],
+  "id" | "slug" | "nama" | "deskripsi_singkat" | "kategori" | "status" | "urutan"
+>;
 
 export const KATEGORI = ["tanda_kecil", "tanda_besar", "fitnah", "akhirat", "umum"] as const;
 export const HADITH_STATUS = ["sudah_terjadi", "sedang_berlangsung", "belum_terjadi", "tidak_berlaku"] as const;
@@ -13,6 +16,8 @@ export type HadithListItem = {
   teks_arab: string;
   matan_ringkas_id: string | null;
   matan_ringkas_en: string | null;
+  terjemah_id: string | null;
+  terjemah_en: string | null;
   status: string | null;
   kategori: string | null;
   derajat: string | null;
@@ -64,7 +69,7 @@ export type ListInput = {
 };
 
 const LIST_COLS =
-  "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, status, kategori, derajat, kitab, nomor";
+  "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, terjemah_id, terjemah_en, status, kategori, derajat, kitab, nomor";
 
 const DETAIL_COLS =
   "code, tema, teks_arab, matan_ringkas_id, matan_ringkas_en, status, kategori, derajat, kitab, nomor, bab, jenis, penilai_derajat, terjemah_id, terjemah_en, syarah_ringkas, rujukan_syarah, link_sumber, verified_by, verified_at";
@@ -134,10 +139,10 @@ export const listHadiths = createServerFn({ method: "GET" })
       );
     }
     if (data.kategori && (KATEGORI as readonly string[]).includes(data.kategori)) {
-      query = query.eq("kategori", data.kategori);
+      query = query.eq("kategori", data.kategori as Database["public"]["Enums"]["tanda_kategori"]);
     }
     if (data.status && (HADITH_STATUS as readonly string[]).includes(data.status)) {
-      query = query.eq("status", data.status);
+      query = query.eq("status", data.status as Database["public"]["Enums"]["hadith_status"]);
     }
     if (data.kitab) query = query.eq("kitab", data.kitab);
 
