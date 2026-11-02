@@ -84,6 +84,7 @@
   --hero-bottom-fade: linear-gradient(180deg, transparent 82%, color-mix(in oklab, var(--ink) 35%, transparent) 94%, var(--ink) 100%);
   --hero-card-surface: color-mix(in oklab, var(--graphite) 82%, transparent);
   --hero-secondary-text: color-mix(in oklab, var(--bone) 80%, var(--mist));
+  --hero-text-shadow: 0 2px 6px var(--ink), 0 0 16px var(--ink);
 }
 
 .hero-sunrise {
@@ -98,7 +99,7 @@
 .hero-home { min-height: 680px; }
 .hero-title { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 44px; line-height: 1.02; letter-spacing: 0; }
 .hero-salawat { display: inline-block; font-size: 0.36em; vertical-align: middle; color: var(--bone); }
-.hero-home .hero-hadith { border-left: 1px solid var(--input); background: transparent; box-shadow: none; backdrop-filter: none; }
+.hero-home .hero-hadith { border-left: 1px solid var(--input); background: transparent; box-shadow: none; backdrop-filter: none; text-shadow: var(--hero-text-shadow); }
 .hero-home .text-muted-foreground { color: var(--hero-secondary-text); }
 @media (min-width: 768px) {
   .hero-home { min-height: 620px; }
