@@ -107,7 +107,7 @@ function publicClient() {
 }
 
 /** PostgREST or-clauses split on commas, so those characters are stripped. */
-function cleanSearch(q: string): string {
+export function cleanSearch(q: string): string {
   return q.replace(/[,()%*"]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
