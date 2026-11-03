@@ -1,26 +1,32 @@
-# Akhirzaman
+# akhirzaman.id
 
-Implement exactly the screenshot and nothing else
+Platform dakwah: kumpulan hadis shahih tentang tanda-tanda akhir zaman, dijelaskan sesuai pemahaman Ahlus Sunnah wal Jama'ah dan manhaj salaf.
 
-This project was built with [Lovable](https://lovable.dev).
+Proyek ini dibangun dengan [Lovable](https://lovable.dev) dan disinkronkan dua arah dengan repo ini pada branch `main`.
 
-**Live app**: https://akhirzaman.lovable.app
+**Situs publik**: https://akhirzaman.lovable.app
 
-## Build with Lovable
+## Pengembangan lokal
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/0c64001c-9dd5-40e2-81cc-3f1416df0f06).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Butuh [Bun](https://bun.sh).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/maerwin1993-ai/akhirzaman.git
+cd akhirzaman
+bun install
+bun run dev
 ```
+
+Perintah lain:
+
+```sh
+bun run lint
+bun run test
+bun run build
+```
+
+## Catatan penting
+
+- Jangan menulis ulang riwayat git (force push, rebase, amend, squash pada commit yang sudah di-push). Lihat `AGENTS.md`.
+- Migrasi database di `supabase/migrations/` dijalankan manual di Supabase, tidak otomatis.
+- Pengaturan admin pertama: lihat `ADMIN_SETUP.md`. Aturan isi dan teknis: lihat `CLAUDE.md`.
