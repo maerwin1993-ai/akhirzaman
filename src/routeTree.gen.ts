@@ -10,15 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DukungRouteImport } from './routes/dukung'
 import { Route as HaditsRouteImport } from './routes/hadits'
 import { Route as KabarRouteImport } from './routes/kabar'
 import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as HaditsCodeRouteImport } from './routes/hadits_.$code'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminHaditsRouteImport } from './routes/_authenticated/admin.hadits'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DukungRoute = DukungRouteImport.update({
@@ -41,59 +56,124 @@ const TimelineRoute = TimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HaditsCodeRoute = HaditsCodeRouteImport.update({
   id: '/hadits_/$code',
   path: '/hadits/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminHaditsRoute =
+  AuthenticatedAdminHaditsRouteImport.update({
+    id: '/hadits',
+    path: '/hadits',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/dukung': typeof DukungRoute
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/login': typeof AdminLoginRoute
   '/hadits/$code': typeof HaditsCodeRoute
+  '/admin/hadits': typeof AuthenticatedAdminHaditsRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/dukung': typeof DukungRoute
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/admin/login': typeof AdminLoginRoute
   '/hadits/$code': typeof HaditsCodeRoute
+  '/admin/hadits': typeof AuthenticatedAdminHaditsRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/dukung': typeof DukungRoute
   '/hadits': typeof HaditsRoute
   '/kabar': typeof KabarRoute
   '/timeline': typeof TimelineRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin/login': typeof AdminLoginRoute
   '/hadits_/$code': typeof HaditsCodeRoute
+  '/_authenticated/admin/hadits': typeof AuthenticatedAdminHaditsRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/dukung' | '/hadits' | '/kabar' | '/timeline' | '/hadits/$code'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dukung' | '/hadits' | '/kabar' | '/timeline' | '/hadits/$code'
-  id:
-    | '__root__'
     | '/'
+    | '/auth'
     | '/dukung'
     | '/hadits'
     | '/kabar'
     | '/timeline'
+    | '/admin'
+    | '/admin/login'
+    | '/hadits/$code'
+    | '/admin/hadits'
+    | '/admin/'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/auth'
+    | '/dukung'
+    | '/hadits'
+    | '/kabar'
+    | '/timeline'
+    | '/admin/login'
+    | '/hadits/$code'
+    | '/admin/hadits'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/dukung'
+    | '/hadits'
+    | '/kabar'
+    | '/timeline'
+    | '/_authenticated/admin'
+    | '/admin/login'
     | '/hadits_/$code'
+    | '/_authenticated/admin/hadits'
+    | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   DukungRoute: typeof DukungRoute
   HaditsRoute: typeof HaditsRoute
   KabarRoute: typeof KabarRoute
   TimelineRoute: typeof TimelineRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   HaditsCodeRoute: typeof HaditsCodeRoute
 }
 
@@ -104,6 +184,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dukung': {
@@ -134,6 +228,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TimelineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/hadits_/$code': {
       id: '/hadits_/$code'
       path: '/hadits/$code'
@@ -141,15 +249,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HaditsCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/hadits': {
+      id: '/_authenticated/admin/hadits'
+      path: '/hadits'
+      fullPath: '/admin/hadits'
+      preLoaderRoute: typeof AuthenticatedAdminHaditsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminHaditsRoute: typeof AuthenticatedAdminHaditsRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminHaditsRoute: AuthenticatedAdminHaditsRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   DukungRoute: DukungRoute,
   HaditsRoute: HaditsRoute,
   KabarRoute: KabarRoute,
   TimelineRoute: TimelineRoute,
+  AdminLoginRoute: AdminLoginRoute,
   HaditsCodeRoute: HaditsCodeRoute,
 }
 export const routeTree = rootRouteImport
