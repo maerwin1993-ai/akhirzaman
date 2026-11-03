@@ -1,22 +1,438 @@
-import { createFileRoute,redirect } from '@tanstack/react-router';
-import { useState,useRef,useEffect,useMemo } from 'react';
-import { useQuery,useQueryClient } from '@tanstack/react-query';
-import { useServerFn } from '@tanstack/react-start';
-import { Upload,FileSpreadsheet,Download,CheckCircle,ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction } from '@/components/ui/alert-dialog';
-import { adminHead,Field } from '@/components/admin/Controls';
-import { adminReferences,importHadithBatch } from '@/lib/admin.functions';
-import { detectMapping,prepareImport,textFields,labels } from '@/lib/admin/rules';
-export const Route=createFileRoute('/_authenticated/admin/import')({beforeLoad:({context})=>{if(context.staff.role!=='admin')throw redirect({to:'/admin/login'});},head:()=>adminHead('Impor hadits','Impor draf hadits dari Excel atau CSV.'),component:Import});
-type WorkbookData={sheets:string[];sheet:string;headers:string[];rows:Record<string,string>[]};
-type Summary={inserted:number;updated:number;skipped:number;failed:number;errors:{row:number;code:string;message:string}[]};
-function Import(){const references=useServerFn(adminReferences);const importBatch=useServerFn(importHadithBatch);const client=useQueryClient();const query=useQuery({queryKey:['admin','references'],queryFn:()=>references()});const [data,setData]=useState<WorkbookData|null>(null);const [filename,setFilename]=useState('');const [mapping,setMapping]=useState<Record<string,string>>({});const [all,setAll]=useState(false);const [decisions,setDecisions]=useState<Record<string,'skip'|'update'>>({});const [loading,setLoading]=useState(false);const [busy,setBusy]=useState(false);const [progress,setProgress]=useState(0);const [error,setError]=useState('');const [summary,setSummary]=useState<Summary|null>(null);const [confirm,setConfirm]=useState(false);const [report,setReport]=useState(false);const buffer=useRef<ArrayBuffer|null>(null);const worker=useRef<Worker|null>(null);const input=useRef<HTMLInputElement|null>(null);
- useEffect(()=>()=>worker.current?.terminate(),[]);
- function parse(bytes:ArrayBuffer,sheet?:string){worker.current?.terminate();setLoading(true);setError('');setData(null);setReport(false);setSummary(null);const w=new Worker(new URL('../../lib/admin/workbook.worker.ts',import.meta.url),{type:'module'});worker.current=w;w.onmessage=(event)=>{setLoading(false);if(event.data.error){setError(event.data.error);return;}const parsed=event.data as WorkbookData;setData(parsed);setMapping(detectMapping(parsed.headers));setDecisions({});};w.onerror=()=>{setLoading(false);setError('File tidak dapat dibaca.');};w.postMessage({buffer:bytes,sheet});}
- async function upload(file:File){if(!/\.(xlsx|csv)$/i.test(file.name)){setError('Pilih file .xlsx atau .csv.');return;}if(file.size>25*1024*1024){setError('File melebihi batas 25 MB.');return;}setFilename(file.name);try{buffer.current=await file.arrayBuffer();parse(buffer.current);}catch{setError('File tidak dapat dibaca.');}}
- const rows=useMemo(()=>data?prepareImport(data.rows,mapping,all,query.data?.codes.map(r=>r.code)??[]):[],[data,mapping,all,query.data]);const invalid=rows.filter(r=>r.errors.length);const duplicates=rows.filter(r=>r.duplicate);const dupCodes=[...new Set(duplicates.map(r=>r.code))];const eligible=rows.filter(r=>!r.errors.length);
- async function run(){setConfirm(false);setBusy(true);setError('');const totals:Summary={inserted:0,updated:0,skipped:0,failed:invalid.length,errors:invalid.map(r=>({row:r.row,code:r.code,message:r.errors.join('; ')}))};for(let i=0;i<eligible.length;i+=10){const chunk=eligible.slice(i,i+10);try{const result=await importBatch({data:{rows:chunk.map(r=>({row:r.row,fields:r.fields,decision:decisions[r.code]??'skip'}))}});totals.inserted+=result.inserted;totals.updated+=result.updated;totals.skipped+=result.skipped;totals.failed+=result.failed;totals.errors.push(...result.errors);}catch{totals.failed+=chunk.length;totals.errors.push(...chunk.map(r=>({row:r.row,code:r.code,message:'Permintaan gagal. Periksa sesi/koneksi, lalu periksa koleksi sebelum mencoba kembali.'})));}setProgress(Math.min(100,Math.round((i+chunk.length)/eligible.length*100)));}setSummary(totals);setBusy(false);await client.invalidateQueries({queryKey:['admin']});}
- function download(){if(!summary)return;const escape=(v:string)=>`"${v.replaceAll('"','""')}"`;const csv='\uFEFFbaris,kode,error\r\n'+summary.errors.map(r=>[r.row,escape(r.code),escape(r.message)].join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='kesalahan-impor.csv';a.click();URL.revokeObjectURL(url);}
- return <><span className="text-xs uppercase text-primary">Koleksi baru</span><h1 className="mt-2 mb-8 text-4xl font-display">Impor hadits</h1><div className="flex flex-wrap items-center gap-4 border-y border-border py-6"><FileSpreadsheet className="size-9 text-primary"/><Button variant="outline" disabled={busy||loading} onClick={()=>input.current?.click()}><Upload/>Pilih CSV / Excel</Button><input ref={input} type="file" accept=".csv,.xlsx" className="hidden" onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.target.value='';}}/><span className="break-all text-sm text-muted-foreground">{filename||'Belum ada file'}</span>{loading&&<span className="text-sm">Membaca file…</span>}</div>{error&&<p role="alert" className="mt-4 text-destructive">{error}</p>}{query.isError&&<p role="alert" className="mt-4 text-destructive">Referensi kode tidak dapat dimuat. <Button variant="outline" onClick={()=>query.refetch()}>Coba lagi</Button></p>}{data&&<><div className="mt-6 flex flex-wrap items-center gap-6"><Field label="Lembar data"><select disabled={busy} aria-label="Lembar data" className="h-9 rounded-md border border-input bg-background px-3" value={data.sheet} onChange={e=>{if(buffer.current)parse(buffer.current,e.target.value);}}>{data.sheets.map(s=><option key={s}>{s}</option>)}</select></Field><label className="flex items-center gap-3 text-sm"><Switch disabled={busy} checked={all} onCheckedChange={v=>{setAll(v);setReport(false);}}/>Impor semua baris</label><span className="text-xs text-muted-foreground">{rows.length} / {data.rows.length} baris dipilih</span></div><h2 className="mt-8 mb-4 text-lg">Pemetaan kolom</h2><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{data.headers.map(h=><Field key={h} label={h}><select disabled={busy} aria-label={`Pemetaan ${h}`} className="h-9 max-w-full rounded-md border border-input bg-background px-3 text-sm" value={mapping[h]??''} onChange={e=>{setMapping(v=>({...v,[h]:e.target.value}));setReport(false);}}><option value="">Abaikan</option>{[...textFields,'kategori','status'].map(f=><option key={f} value={f}>{labels[f]??f}</option>)}</select></Field>)}</div><Button className="mt-6" disabled={busy||query.isPending||query.isError||Object.values(mapping).filter(Boolean).length!==new Set(Object.values(mapping).filter(Boolean)).size} onClick={()=>setReport(true)}><ArrowRight/>Validasi & pratinjau</Button>{report&&<><div className="mt-8 grid grid-cols-3 border-y border-border py-5 text-center"><div><strong className="text-2xl">{eligible.length}</strong><p className="mt-1 text-xs text-muted-foreground">Valid</p></div><div><strong className="text-2xl text-destructive">{invalid.length}</strong><p className="mt-1 text-xs text-muted-foreground">Bermasalah</p></div><div><strong className="text-2xl text-primary">{duplicates.length}</strong><p className="mt-1 text-xs text-muted-foreground">Duplikat</p></div></div>{invalid.length>0&&<div className="mt-4 max-h-52 overflow-y-auto"><h3 className="mb-2 text-sm">Laporan validasi</h3>{invalid.map(r=><p key={r.row} className="py-1 text-xs text-destructive">Baris {r.row} · {r.code||'Tanpa kode'}: {r.errors.join('; ')}</p>)}</div>}{dupCodes.length>0&&<div className="mt-6"><h3 className="mb-3">Keputusan kode duplikat</h3><div className="grid max-h-64 gap-3 overflow-y-auto sm:grid-cols-2">{dupCodes.map(code=><Field key={code} label={code}><select disabled={busy} aria-label={`Duplikat ${code}`} className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={decisions[code]??'skip'} onChange={e=>setDecisions(v=>({...v,[code]:e.target.value==='update'?'update':'skip'}))}><option value="skip">Lewati duplikat</option><option value="update">Perbarui dengan baris terakhir</option></select></Field>)}</div></div>}<h3 className="mt-7 mb-3">Pratinjau · {Math.min(20,rows.length)} baris</h3><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr>{['Baris','Kode','Tema','Kitab','Nomor','Teks Arab','Kategori','Status'].map(v=><th className="border-b border-border p-3 font-normal text-muted-foreground" key={v}>{v}</th>)}</tr></thead><tbody>{rows.slice(0,20).map(r=><tr key={r.row} className="border-b border-border"><td className="p-3">{r.row}</td>{['code','tema','kitab','nomor','teks_arab','kategori','status'].map(f=><td key={f} className={`max-w-64 p-3 ${f==='teks_arab'?'font-arabic text-lg':''}`} dir={f==='teks_arab'?'rtl':undefined}><span className="line-clamp-3">{String(r.fields[f]??'—')}</span></td>)}</tr>)}</tbody></table></div><div className="mt-6 flex items-center gap-4"><Button disabled={busy||eligible.length===0||Boolean(summary)||query.isError} onClick={()=>setConfirm(true)}><Upload/>{busy?`Mengimpor ${progress}%`:'Impor sebagai draf'}</Button>{busy&&<progress aria-label="Kemajuan impor" value={progress} max={100} className="h-2 w-40 accent-primary"/>}</div></>}</>}{summary&&<section className="mt-8 border-t border-border pt-6"><h2 className="flex items-center gap-2 text-lg"><CheckCircle className="size-5 text-primary"/>Impor selesai</h2><p className="mt-3 text-sm">Ditambahkan: {summary.inserted} · Diperbarui: {summary.updated} · Dilewati: {summary.skipped} · Gagal: {summary.failed}</p>{summary.errors.length>0&&<Button variant="outline" className="mt-4" onClick={download}><Download/>Unduh daftar kesalahan</Button>}</section>}<AlertDialog open={confirm} onOpenChange={setConfirm}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Impor {eligible.length} baris valid?</AlertDialogTitle><AlertDialogDescription>Semua baris disimpan sebagai draf. Pembaruan kode duplikat juga menonaktifkan publikasi. {invalid.length} baris bermasalah tidak akan disimpan.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={run}>Konfirmasi impor</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></>;}
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Upload, FileSpreadsheet, Download, CheckCircle, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { adminHead, Field } from "@/components/admin/Controls";
+import { adminReferences, importHadithBatch } from "@/lib/admin.functions";
+import { detectMapping, prepareImport, textFields, labels } from "@/lib/admin/rules";
+export const Route = createFileRoute("/_authenticated/admin/import")({
+  beforeLoad: ({ context }) => {
+    if (context.staff.role !== "admin") throw redirect({ to: "/admin/login" });
+  },
+  head: () => adminHead("Impor hadits", "Impor draf hadits dari Excel atau CSV."),
+  component: Import,
+});
+type WorkbookData = {
+  sheets: string[];
+  sheet: string;
+  headers: string[];
+  rows: Record<string, string>[];
+};
+type Summary = {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: { row: number; code: string; message: string }[];
+};
+function Import() {
+  const references = useServerFn(adminReferences);
+  const importBatch = useServerFn(importHadithBatch);
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ["admin", "references"], queryFn: () => references() });
+  const [data, setData] = useState<WorkbookData | null>(null);
+  const [filename, setFilename] = useState("");
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [all, setAll] = useState(false);
+  const [decisions, setDecisions] = useState<Record<string, "skip" | "update">>({});
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState("");
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [report, setReport] = useState(false);
+  const buffer = useRef<ArrayBuffer | null>(null);
+  const worker = useRef<Worker | null>(null);
+  const input = useRef<HTMLInputElement | null>(null);
+  useEffect(() => () => worker.current?.terminate(), []);
+  function parse(bytes: ArrayBuffer, sheet?: string) {
+    worker.current?.terminate();
+    setLoading(true);
+    setError("");
+    setData(null);
+    setReport(false);
+    setSummary(null);
+    const w = new Worker(new URL("../../lib/admin/workbook.worker.ts", import.meta.url), {
+      type: "module",
+    });
+    worker.current = w;
+    w.onmessage = (event) => {
+      setLoading(false);
+      if (event.data.error) {
+        setError(event.data.error);
+        return;
+      }
+      const parsed = event.data as WorkbookData;
+      setData(parsed);
+      setMapping(detectMapping(parsed.headers));
+      setDecisions({});
+    };
+    w.onerror = () => {
+      setLoading(false);
+      setError("File tidak dapat dibaca.");
+    };
+    w.postMessage({ buffer: bytes, sheet });
+  }
+  async function upload(file: File) {
+    if (!/\.(xlsx|csv)$/i.test(file.name)) {
+      setError("Pilih file .xlsx atau .csv.");
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      setError("File melebihi batas 25 MB.");
+      return;
+    }
+    setFilename(file.name);
+    try {
+      buffer.current = await file.arrayBuffer();
+      parse(buffer.current);
+    } catch {
+      setError("File tidak dapat dibaca.");
+    }
+  }
+  const rows = useMemo(
+    () =>
+      data
+        ? prepareImport(data.rows, mapping, all, query.data?.codes.map((r) => r.code) ?? [])
+        : [],
+    [data, mapping, all, query.data],
+  );
+  const invalid = rows.filter((r) => r.errors.length);
+  const duplicates = rows.filter((r) => r.duplicate);
+  const dupCodes = [...new Set(duplicates.map((r) => r.code))];
+  const eligible = rows.filter((r) => !r.errors.length);
+  async function run() {
+    setConfirm(false);
+    setBusy(true);
+    setError("");
+    const totals: Summary = {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      failed: invalid.length,
+      errors: invalid.map((r) => ({ row: r.row, code: r.code, message: r.errors.join("; ") })),
+    };
+    for (let i = 0; i < eligible.length; i += 10) {
+      const chunk = eligible.slice(i, i + 10);
+      try {
+        const result = await importBatch({
+          data: {
+            rows: chunk.map((r) => ({
+              row: r.row,
+              fields: r.fields,
+              decision: decisions[r.code] ?? "skip",
+            })),
+          },
+        });
+        totals.inserted += result.inserted;
+        totals.updated += result.updated;
+        totals.skipped += result.skipped;
+        totals.failed += result.failed;
+        totals.errors.push(...result.errors);
+      } catch {
+        totals.failed += chunk.length;
+        totals.errors.push(
+          ...chunk.map((r) => ({
+            row: r.row,
+            code: r.code,
+            message:
+              "Permintaan gagal. Periksa sesi/koneksi, lalu periksa koleksi sebelum mencoba kembali.",
+          })),
+        );
+      }
+      setProgress(Math.min(100, Math.round(((i + chunk.length) / eligible.length) * 100)));
+    }
+    setSummary(totals);
+    setBusy(false);
+    await client.invalidateQueries({ queryKey: ["admin"] });
+  }
+  function download() {
+    if (!summary) return;
+    const escape = (v: string) => `"${v.replaceAll('"', '""')}"`;
+    const csv =
+      "\uFEFFbaris,kode,error\r\n" +
+      summary.errors.map((r) => [r.row, escape(r.code), escape(r.message)].join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kesalahan-impor.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <>
+      <span className="text-xs uppercase text-primary">Koleksi baru</span>
+      <h1 className="mt-2 mb-8 text-4xl font-display">Impor hadits</h1>
+      <div className="flex flex-wrap items-center gap-4 border-y border-border py-6">
+        <FileSpreadsheet className="size-9 text-primary" />
+        <Button variant="outline" disabled={busy || loading} onClick={() => input.current?.click()}>
+          <Upload />
+          Pilih CSV / Excel
+        </Button>
+        <input
+          ref={input}
+          type="file"
+          accept=".csv,.xlsx"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void upload(file);
+            e.target.value = "";
+          }}
+        />
+        <span className="break-all text-sm text-muted-foreground">
+          {filename || "Belum ada file"}
+        </span>
+        {loading && <span className="text-sm">Membaca file…</span>}
+      </div>
+      {error && (
+        <p role="alert" className="mt-4 text-destructive">
+          {error}
+        </p>
+      )}
+      {query.isError && (
+        <p role="alert" className="mt-4 text-destructive">
+          Referensi kode tidak dapat dimuat.{" "}
+          <Button variant="outline" onClick={() => query.refetch()}>
+            Coba lagi
+          </Button>
+        </p>
+      )}
+      {data && (
+        <>
+          <div className="mt-6 flex flex-wrap items-center gap-6">
+            <Field label="Lembar data">
+              <select
+                disabled={busy}
+                aria-label="Lembar data"
+                className="h-9 rounded-md border border-input bg-background px-3"
+                value={data.sheet}
+                onChange={(e) => {
+                  if (buffer.current) parse(buffer.current, e.target.value);
+                }}
+              >
+                {data.sheets.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </Field>
+            <label className="flex items-center gap-3 text-sm">
+              <Switch
+                disabled={busy}
+                checked={all}
+                onCheckedChange={(v) => {
+                  setAll(v);
+                  setReport(false);
+                }}
+              />
+              Impor semua baris
+            </label>
+            <span className="text-xs text-muted-foreground">
+              {rows.length} / {data.rows.length} baris dipilih
+            </span>
+          </div>
+          <h2 className="mt-8 mb-4 text-lg">Pemetaan kolom</h2>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {data.headers.map((h) => (
+              <Field key={h} label={h}>
+                <select
+                  disabled={busy}
+                  aria-label={`Pemetaan ${h}`}
+                  className="h-9 max-w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={mapping[h] ?? ""}
+                  onChange={(e) => {
+                    setMapping((v) => ({ ...v, [h]: e.target.value }));
+                    setReport(false);
+                  }}
+                >
+                  <option value="">Abaikan</option>
+                  {[...textFields, "kategori", "status"].map((f) => (
+                    <option key={f} value={f}>
+                      {labels[f] ?? f}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ))}
+          </div>
+          <Button
+            className="mt-6"
+            disabled={
+              busy ||
+              query.isPending ||
+              query.isError ||
+              Object.values(mapping).filter(Boolean).length !==
+                new Set(Object.values(mapping).filter(Boolean)).size
+            }
+            onClick={() => setReport(true)}
+          >
+            <ArrowRight />
+            Validasi & pratinjau
+          </Button>
+          {report && (
+            <>
+              <div className="mt-8 grid grid-cols-3 border-y border-border py-5 text-center">
+                <div>
+                  <strong className="text-2xl">{eligible.length}</strong>
+                  <p className="mt-1 text-xs text-muted-foreground">Valid</p>
+                </div>
+                <div>
+                  <strong className="text-2xl text-destructive">{invalid.length}</strong>
+                  <p className="mt-1 text-xs text-muted-foreground">Bermasalah</p>
+                </div>
+                <div>
+                  <strong className="text-2xl text-primary">{duplicates.length}</strong>
+                  <p className="mt-1 text-xs text-muted-foreground">Duplikat</p>
+                </div>
+              </div>
+              {invalid.length > 0 && (
+                <div className="mt-4 max-h-52 overflow-y-auto">
+                  <h3 className="mb-2 text-sm">Laporan validasi</h3>
+                  {invalid.map((r) => (
+                    <p key={r.row} className="py-1 text-xs text-destructive">
+                      Baris {r.row} · {r.code || "Tanpa kode"}: {r.errors.join("; ")}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {dupCodes.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="mb-3">Keputusan kode duplikat</h3>
+                  <div className="grid max-h-64 gap-3 overflow-y-auto sm:grid-cols-2">
+                    {dupCodes.map((code) => (
+                      <Field key={code} label={code}>
+                        <select
+                          disabled={busy}
+                          aria-label={`Duplikat ${code}`}
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                          value={decisions[code] ?? "skip"}
+                          onChange={(e) =>
+                            setDecisions((v) => ({
+                              ...v,
+                              [code]: e.target.value === "update" ? "update" : "skip",
+                            }))
+                          }
+                        >
+                          <option value="skip">Lewati duplikat</option>
+                          <option value="update">Perbarui dengan baris terakhir</option>
+                        </select>
+                      </Field>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <h3 className="mt-7 mb-3">Pratinjau · {Math.min(20, rows.length)} baris</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr>
+                      {[
+                        "Baris",
+                        "Kode",
+                        "Tema",
+                        "Kitab",
+                        "Nomor",
+                        "Teks Arab",
+                        "Kategori",
+                        "Status",
+                      ].map((v) => (
+                        <th
+                          className="border-b border-border p-3 font-normal text-muted-foreground"
+                          key={v}
+                        >
+                          {v}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 20).map((r) => (
+                      <tr key={r.row} className="border-b border-border">
+                        <td className="p-3">{r.row}</td>
+                        {["code", "tema", "kitab", "nomor", "teks_arab", "kategori", "status"].map(
+                          (f) => (
+                            <td
+                              key={f}
+                              className={`max-w-64 p-3 ${f === "teks_arab" ? "font-arabic text-lg" : ""}`}
+                              dir={f === "teks_arab" ? "rtl" : undefined}
+                            >
+                              <span className="line-clamp-3">{String(r.fields[f] ?? "—")}</span>
+                            </td>
+                          ),
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-6 flex items-center gap-4">
+                <Button
+                  disabled={busy || eligible.length === 0 || Boolean(summary) || query.isError}
+                  onClick={() => setConfirm(true)}
+                >
+                  <Upload />
+                  {busy ? `Mengimpor ${progress}%` : "Impor sebagai draf"}
+                </Button>
+                {busy && (
+                  <progress
+                    aria-label="Kemajuan impor"
+                    value={progress}
+                    max={100}
+                    className="h-2 w-40 accent-primary"
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+      {summary && (
+        <section className="mt-8 border-t border-border pt-6">
+          <h2 className="flex items-center gap-2 text-lg">
+            <CheckCircle className="size-5 text-primary" />
+            Impor selesai
+          </h2>
+          <p className="mt-3 text-sm">
+            Ditambahkan: {summary.inserted} · Diperbarui: {summary.updated} · Dilewati:{" "}
+            {summary.skipped} · Gagal: {summary.failed}
+          </p>
+          {summary.errors.length > 0 && (
+            <Button variant="outline" className="mt-4" onClick={download}>
+              <Download />
+              Unduh daftar kesalahan
+            </Button>
+          )}
+        </section>
+      )}
+      <AlertDialog open={confirm} onOpenChange={setConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Impor {eligible.length} baris valid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Semua baris disimpan sebagai draf. Pembaruan kode duplikat juga menonaktifkan
+              publikasi. {invalid.length} baris bermasalah tidak akan disimpan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={run}>Konfirmasi impor</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

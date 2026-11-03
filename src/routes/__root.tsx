@@ -84,7 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "akhirzaman.id" },
-      { name: "description", content: "Platform edukasi hadits shahih tentang tanda-tanda akhir zaman." },
+      {
+        name: "description",
+        content: "Platform edukasi hadits shahih tentang tanda-tanda akhir zaman.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#0B0D12" },
@@ -92,7 +95,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
@@ -121,12 +127,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const adminSurface = pathname.startsWith('/admin') || pathname === '/auth';
+  const adminSurface = pathname.startsWith("/admin") || pathname === "/auth";
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (!['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) return;
+      if (!["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(event)) return;
       void router.invalidate();
-      if (event !== 'SIGNED_OUT') void queryClient.invalidateQueries();
+      if (event !== "SIGNED_OUT") void queryClient.invalidateQueries();
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
@@ -134,7 +140,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        {adminSurface ? <Outlet /> : <SiteLayout><Outlet /></SiteLayout>}
+        {adminSurface ? (
+          <Outlet />
+        ) : (
+          <SiteLayout>
+            <Outlet />
+          </SiteLayout>
+        )}
         {adminSurface && <Toaster />}
       </I18nProvider>
     </QueryClientProvider>

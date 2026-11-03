@@ -1,16 +1,183 @@
-import { useEffect,useState } from 'react';
-import { useQuery,useQueryClient } from '@tanstack/react-query';
-import { useServerFn } from '@tanstack/react-start';
-import { toast } from 'sonner';
-import { Save } from 'lucide-react';
-import { Dialog,DialogContent,DialogHeader,DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
-import { Field,Picker } from './Controls';
-import { getAdminHadith,saveAdminHadith } from '@/lib/admin.functions';
-import { textFields,labels,categories,statuses,hadithSchema } from '@/lib/admin/rules';
-import type { Tables } from '@/integrations/supabase/types';
-export function HadithEditor({id,signs,onClose}:{id:string;signs:Tables<'signs'>[];onClose:()=>void}){const fetch=useServerFn(getAdminHadith);const save=useServerFn(saveAdminHadith);const queryClient=useQueryClient();const query=useQuery({queryKey:['admin','hadith',id],queryFn:()=>fetch({data:{id}})});const [fields,setFields]=useState<Record<string,unknown>>({});const [signIds,setSignIds]=useState<string[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');useEffect(()=>{if(query.data){setFields(query.data.row);setSignIds(query.data.signIds);}},[query.data]);function set(key:string,value:unknown){setFields(v=>({...v,[key]:value}));}async function submit(e:React.FormEvent){e.preventDefault();const parsed=hadithSchema.safeParse(fields);if(!parsed.success){setError(parsed.error.issues.map(i=>`${labels[String(i.path[0])]??i.path[0]}: ${i.message}`).join(' · '));return;}setBusy(true);try{await save({data:{id,fields:parsed.data,signIds}});await queryClient.invalidateQueries({queryKey:['admin']});toast.success('Hadits tersimpan');onClose();}catch(e){setError(e instanceof Error?e.message:'Gagal menyimpan.');}finally{setBusy(false);}}return <Dialog open onOpenChange={open=>{if(!open&&!busy)onClose();}}><DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto"><DialogHeader><DialogTitle>Edit hadits — {query.data?.row.code}</DialogTitle></DialogHeader>{query.isPending?<p>Memuat…</p>:query.isError?<p role="alert">Hadits tidak dapat dimuat.</p>:<form onSubmit={submit} className="grid gap-5"><div className="grid gap-4 sm:grid-cols-2">{textFields.map(f=>{const multiline=['teks_arab','terjemah_id','terjemah_en','matan_ringkas_id','matan_ringkas_en','syarah_ringkas','catatan_ustadz'].includes(f);return <div key={f} className={multiline?'sm:col-span-2':''}><Field label={labels[f]??f}>{multiline?<Textarea rows={f==='teks_arab'?5:3} dir={f==='teks_arab'?'rtl':undefined} className={f==='teks_arab'?'font-arabic text-2xl leading-loose':''} value={String(fields[f]??'')} onChange={e=>set(f,e.target.value)}/>:<Input value={String(fields[f]??'')} onChange={e=>set(f,e.target.value)} required={['code','kitab','nomor'].includes(f)}/>}</Field></div>;})}<Field label="Kategori"><Picker label="Kategori edit" value={String(fields['kategori']??'')} options={categories} empty="Tidak ditetapkan" onChange={v=>set('kategori',v||null)}/></Field><Field label="Status"><Picker label="Status edit" value={String(fields['status']??'')} options={statuses} empty="Tidak ditetapkan" onChange={v=>set('status',v||null)}/></Field><Field label="Diterbitkan"><Switch checked={Boolean(fields['is_published'])} onCheckedChange={v=>set('is_published',v)}/></Field><Field label="Waktu verifikasi"><Input readOnly value={String(fields['verified_at']??'—')}/></Field></div><fieldset className="border-t border-border pt-4"><legend className="text-sm">Tanda terkait</legend><div className="mt-3 grid gap-3 sm:grid-cols-2">{signs.map(sign=><label key={sign.id} className="flex items-start gap-2 text-sm"><Checkbox checked={signIds.includes(sign.id)} onCheckedChange={checked=>setSignIds(v=>checked?[...v,sign.id]:v.filter(id=>id!==sign.id))}/>{sign.nama}</label>)}</div></fieldset>{error&&<p role="alert" className="text-sm text-destructive">{error}</p>}<div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background pt-4"><Button type="button" variant="outline" disabled={busy} onClick={onClose}>Batal</Button><Button type="submit" disabled={busy}><Save/>{busy?'Menyimpan…':'Simpan'}</Button></div></form>}</DialogContent></Dialog>;}
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Field, Picker } from "./Controls";
+import { getAdminHadith, saveAdminHadith } from "@/lib/admin.functions";
+import { textFields, labels, categories, statuses, hadithSchema } from "@/lib/admin/rules";
+import type { Tables } from "@/integrations/supabase/types";
+export function HadithEditor({
+  id,
+  signs,
+  onClose,
+}: {
+  id: string;
+  signs: Tables<"signs">[];
+  onClose: () => void;
+}) {
+  const fetch = useServerFn(getAdminHadith);
+  const save = useServerFn(saveAdminHadith);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["admin", "hadith", id],
+    queryFn: () => fetch({ data: { id } }),
+  });
+  const [fields, setFields] = useState<Record<string, unknown>>({});
+  const [signIds, setSignIds] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (query.data) {
+      setFields(query.data.row);
+      setSignIds(query.data.signIds);
+    }
+  }, [query.data]);
+  function set(key: string, value: unknown) {
+    setFields((v) => ({ ...v, [key]: value }));
+  }
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const parsed = hadithSchema.safeParse(fields);
+    if (!parsed.success) {
+      setError(
+        parsed.error.issues
+          .map((i) => `${labels[String(i.path[0])] ?? i.path[0]}: ${i.message}`)
+          .join(" · "),
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      await save({ data: { id, fields: parsed.data, signIds } });
+      await queryClient.invalidateQueries({ queryKey: ["admin"] });
+      toast.success("Hadits tersimpan");
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal menyimpan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
+      }}
+    >
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit hadits — {query.data?.row.code}</DialogTitle>
+        </DialogHeader>
+        {query.isPending ? (
+          <p>Memuat…</p>
+        ) : query.isError ? (
+          <p role="alert">Hadits tidak dapat dimuat.</p>
+        ) : (
+          <form onSubmit={submit} className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {textFields.map((f) => {
+                const multiline = [
+                  "teks_arab",
+                  "terjemah_id",
+                  "terjemah_en",
+                  "matan_ringkas_id",
+                  "matan_ringkas_en",
+                  "syarah_ringkas",
+                  "catatan_ustadz",
+                ].includes(f);
+                return (
+                  <div key={f} className={multiline ? "sm:col-span-2" : ""}>
+                    <Field label={labels[f] ?? f}>
+                      {multiline ? (
+                        <Textarea
+                          rows={f === "teks_arab" ? 5 : 3}
+                          dir={f === "teks_arab" ? "rtl" : undefined}
+                          className={f === "teks_arab" ? "font-arabic text-2xl leading-loose" : ""}
+                          value={String(fields[f] ?? "")}
+                          onChange={(e) => set(f, e.target.value)}
+                        />
+                      ) : (
+                        <Input
+                          value={String(fields[f] ?? "")}
+                          onChange={(e) => set(f, e.target.value)}
+                          required={["code", "kitab", "nomor"].includes(f)}
+                        />
+                      )}
+                    </Field>
+                  </div>
+                );
+              })}
+              <Field label="Kategori">
+                <Picker
+                  label="Kategori edit"
+                  value={String(fields["kategori"] ?? "")}
+                  options={categories}
+                  empty="Tidak ditetapkan"
+                  onChange={(v) => set("kategori", v || null)}
+                />
+              </Field>
+              <Field label="Status">
+                <Picker
+                  label="Status edit"
+                  value={String(fields["status"] ?? "")}
+                  options={statuses}
+                  empty="Tidak ditetapkan"
+                  onChange={(v) => set("status", v || null)}
+                />
+              </Field>
+              <Field label="Diterbitkan">
+                <Switch
+                  checked={Boolean(fields["is_published"])}
+                  onCheckedChange={(v) => set("is_published", v)}
+                />
+              </Field>
+              <Field label="Waktu verifikasi">
+                <Input readOnly value={String(fields["verified_at"] ?? "—")} />
+              </Field>
+            </div>
+            <fieldset className="border-t border-border pt-4">
+              <legend className="text-sm">Tanda terkait</legend>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {signs.map((sign) => (
+                  <label key={sign.id} className="flex items-start gap-2 text-sm">
+                    <Checkbox
+                      checked={signIds.includes(sign.id)}
+                      onCheckedChange={(checked) =>
+                        setSignIds((v) =>
+                          checked ? [...v, sign.id] : v.filter((id) => id !== sign.id),
+                        )
+                      }
+                    />
+                    {sign.nama}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background pt-4">
+              <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={busy}>
+                <Save />
+                {busy ? "Menyimpan…" : "Simpan"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

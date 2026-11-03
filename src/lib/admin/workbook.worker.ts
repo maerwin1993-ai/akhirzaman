@@ -1,2 +1,21 @@
-import * as XLSX from 'xlsx';
-self.onmessage=(event:MessageEvent<{buffer:ArrayBuffer;sheet?:string}>)=>{try{const workbook=XLSX.read(event.data.buffer,{type:'array',dense:true,codepage:65001});const name=event.data.sheet??(workbook.SheetNames.includes('Data Hadis')?'Data Hadis':workbook.SheetNames[0]);const sheet=name?workbook.Sheets[name]:undefined;if(!sheet)throw Error('Lembar data tidak ditemukan.');const matrix=XLSX.utils.sheet_to_json<string[]>(sheet,{header:1,raw:false,defval:''});const headers=(matrix[0]??[]).map(String);if(!headers.length||new Set(headers).size!==headers.length)throw Error('Header kosong atau duplikat. Gunakan nama kolom unik.');const rows=matrix.slice(1).map(values=>Object.fromEntries(headers.map((h,i)=>[h,String(values[i]??'')])));self.postMessage({sheets:workbook.SheetNames,sheet:name,headers,rows});}catch(e){self.postMessage({error:e instanceof Error?e.message:'File tidak dapat dibaca.'});}};
+import * as XLSX from "xlsx";
+self.onmessage = (event: MessageEvent<{ buffer: ArrayBuffer; sheet?: string }>) => {
+  try {
+    const workbook = XLSX.read(event.data.buffer, { type: "array", dense: true, codepage: 65001 });
+    const name =
+      event.data.sheet ??
+      (workbook.SheetNames.includes("Data Hadis") ? "Data Hadis" : workbook.SheetNames[0]);
+    const sheet = name ? workbook.Sheets[name] : undefined;
+    if (!sheet) throw Error("Lembar data tidak ditemukan.");
+    const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: "" });
+    const headers = (matrix[0] ?? []).map(String);
+    if (!headers.length || new Set(headers).size !== headers.length)
+      throw Error("Header kosong atau duplikat. Gunakan nama kolom unik.");
+    const rows = matrix
+      .slice(1)
+      .map((values) => Object.fromEntries(headers.map((h, i) => [h, String(values[i] ?? "")])));
+    self.postMessage({ sheets: workbook.SheetNames, sheet: name, headers, rows });
+  } catch (e) {
+    self.postMessage({ error: e instanceof Error ? e.message : "File tidak dapat dibaca." });
+  }
+};

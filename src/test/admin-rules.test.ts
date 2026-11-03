@@ -1,14 +1,119 @@
-import {describe,it,expect} from 'vitest';
-import {canManage,detectMapping,prepareImport,hadithSchema,draftFields,categories,statuses} from '@/lib/admin/rules';
-const valid={code:'X001',kitab:'Muslim',nomor:'2901',teks_arab:'نص عربي',kategori:'tanda_besar',status:'belum_terjadi',is_published:false};
-describe('Staff permissions and publication',()=>{it('reviewers cannot manage signs, delete or import',()=>{expect(canManage('reviewer')).toBe(false);expect(canManage('admin')).toBe(true);});it('publishing requires verified_by',()=>{expect(hadithSchema.safeParse({...valid,is_published:true,verified_by:''}).success).toBe(false);expect(hadithSchema.safeParse({...valid,is_published:true,verified_by:'Ustadz'}).success).toBe(true);});it('all imports become unpublished',()=>{expect(draftFields({...valid,is_published:true}).is_published).toBe(false);});});
-describe('Spreadsheet import',()=>{const mapping=detectMapping(['id','pilih','kitab','nomor','teks_arab','kategori','status','link_sunnah','diverifikasi_oleh','grup']);const row={id:'X001',pilih:'Ya',kitab:'Muslim',nomor:'2901',teks_arab:'نص عربي',kategori:'Tanda Besar',status:'Belum Terjadi'};
-it('detects specified header aliases and ignores grup',()=>{expect(mapping['id']).toBe('code');expect(mapping['link_sunnah']).toBe('link_sumber');expect(mapping['diverifikasi_oleh']).toBe('verified_by');expect(mapping['grup']).toBe('');});
-it('imports only pilih Ya unless all is enabled',()=>{expect(prepareImport([row,{...row,id:'X002',pilih:'Tidak'}],mapping,false,[])).toHaveLength(1);expect(prepareImport([row,{...row,id:'X002',pilih:'Tidak'}],mapping,true,[])).toHaveLength(2);});
-it.each(['code','kitab','nomor','teks_arab'])('requires %s',field=>{expect(hadithSchema.safeParse({...valid,[field]:''}).success).toBe(false);});
-it.each(categories)('maps category %s',category=>{expect(prepareImport([{...row,kategori:category.replaceAll('_',' ')}],mapping,false,[])[0]?.fields['kategori']).toBe(category);});
-it.each(statuses)('maps status %s',status=>{expect(prepareImport([{...row,status:status.replaceAll('_',' ')}],mapping,false,[])[0]?.fields['status']).toBe(status);});
-it('reports unknown category and status',()=>{expect(prepareImport([{...row,kategori:'unknown',status:'unknown'}],mapping,false,[])[0]?.errors).toHaveLength(2);});
-it('identifies duplicates in the database and file',()=>{expect(prepareImport([row],mapping,false,['X001'])[0]?.duplicate).toBe(true);expect(prepareImport([row,row],mapping,false,[]).map(r=>r.duplicate)).toEqual([false,true]);});
-it('reports oversized required fields before import',()=>{expect(prepareImport([{...row,teks_arab:'ع'.repeat(100001)}],mapping,false,[])[0]?.errors.length).toBeGreaterThan(0);});
-it('preserves long Arabic across 350 rows',()=>{const arabic='حديث '.repeat(5000);const rows=Array.from({length:350},(_,i)=>({...row,id:`A${i}`,teks_arab:arabic}));const result=prepareImport(rows,mapping,false,[]);expect(result).toHaveLength(350);expect(result[349]?.fields['teks_arab']).toBe(arabic.trim());expect(result[349]?.errors).toEqual([]);});});
+import { describe, it, expect } from "vitest";
+import {
+  canManage,
+  detectMapping,
+  prepareImport,
+  hadithSchema,
+  draftFields,
+  categories,
+  statuses,
+} from "@/lib/admin/rules";
+const valid = {
+  code: "X001",
+  kitab: "Muslim",
+  nomor: "2901",
+  teks_arab: "نص عربي",
+  kategori: "tanda_besar",
+  status: "belum_terjadi",
+  is_published: false,
+};
+describe("Staff permissions and publication", () => {
+  it("reviewers cannot manage signs, delete or import", () => {
+    expect(canManage("reviewer")).toBe(false);
+    expect(canManage("admin")).toBe(true);
+  });
+  it("publishing requires verified_by", () => {
+    expect(hadithSchema.safeParse({ ...valid, is_published: true, verified_by: "" }).success).toBe(
+      false,
+    );
+    expect(
+      hadithSchema.safeParse({ ...valid, is_published: true, verified_by: "Ustadz" }).success,
+    ).toBe(true);
+  });
+  it("all imports become unpublished", () => {
+    expect(draftFields({ ...valid, is_published: true }).is_published).toBe(false);
+  });
+});
+describe("Spreadsheet import", () => {
+  const mapping = detectMapping([
+    "id",
+    "pilih",
+    "kitab",
+    "nomor",
+    "teks_arab",
+    "kategori",
+    "status",
+    "link_sunnah",
+    "diverifikasi_oleh",
+    "grup",
+  ]);
+  const row = {
+    id: "X001",
+    pilih: "Ya",
+    kitab: "Muslim",
+    nomor: "2901",
+    teks_arab: "نص عربي",
+    kategori: "Tanda Besar",
+    status: "Belum Terjadi",
+  };
+  it("detects specified header aliases and ignores grup", () => {
+    expect(mapping["id"]).toBe("code");
+    expect(mapping["link_sunnah"]).toBe("link_sumber");
+    expect(mapping["diverifikasi_oleh"]).toBe("verified_by");
+    expect(mapping["grup"]).toBe("");
+  });
+  it("imports only pilih Ya unless all is enabled", () => {
+    expect(
+      prepareImport([row, { ...row, id: "X002", pilih: "Tidak" }], mapping, false, []),
+    ).toHaveLength(1);
+    expect(
+      prepareImport([row, { ...row, id: "X002", pilih: "Tidak" }], mapping, true, []),
+    ).toHaveLength(2);
+  });
+  it.each(["code", "kitab", "nomor", "teks_arab"])("requires %s", (field) => {
+    expect(hadithSchema.safeParse({ ...valid, [field]: "" }).success).toBe(false);
+  });
+  it.each(categories)("maps category %s", (category) => {
+    expect(
+      prepareImport([{ ...row, kategori: category.replaceAll("_", " ") }], mapping, false, [])[0]
+        ?.fields["kategori"],
+    ).toBe(category);
+  });
+  it.each(statuses)("maps status %s", (status) => {
+    expect(
+      prepareImport([{ ...row, status: status.replaceAll("_", " ") }], mapping, false, [])[0]
+        ?.fields["status"],
+    ).toBe(status);
+  });
+  it("reports unknown category and status", () => {
+    expect(
+      prepareImport([{ ...row, kategori: "unknown", status: "unknown" }], mapping, false, [])[0]
+        ?.errors,
+    ).toHaveLength(2);
+  });
+  it("identifies duplicates in the database and file", () => {
+    expect(prepareImport([row], mapping, false, ["X001"])[0]?.duplicate).toBe(true);
+    expect(prepareImport([row, row], mapping, false, []).map((r) => r.duplicate)).toEqual([
+      false,
+      true,
+    ]);
+  });
+  it("reports oversized required fields before import", () => {
+    expect(
+      prepareImport([{ ...row, teks_arab: "ع".repeat(100001) }], mapping, false, [])[0]?.errors
+        .length,
+    ).toBeGreaterThan(0);
+  });
+  it("preserves long Arabic across 350 rows", () => {
+    const arabic = "حديث ".repeat(5000);
+    const rows = Array.from({ length: 350 }, (_, i) => ({
+      ...row,
+      id: `A${i}`,
+      teks_arab: arabic,
+    }));
+    const result = prepareImport(rows, mapping, false, []);
+    expect(result).toHaveLength(350);
+    expect(result[349]?.fields["teks_arab"]).toBe(arabic.trim());
+    expect(result[349]?.errors).toEqual([]);
+  });
+});

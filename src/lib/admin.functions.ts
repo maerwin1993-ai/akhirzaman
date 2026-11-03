@@ -1,19 +1,211 @@
-import { createServerFn } from '@tanstack/react-start';
-import { createMiddleware } from '@tanstack/react-start';
-import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
-import { z } from 'zod';
-import { hadithSchema,categories,statuses,draftFields } from './admin/rules';
-import { cleanSearch } from './hadith-search';
-import type { Tables,TablesInsert } from '@/integrations/supabase/types';
-const staff = createMiddleware({type:'function'}).middleware([requireSupabaseAuth]).server(async({context,next})=>{const [a,r]=await Promise.all([context.supabase.rpc('has_role',{_user_id:context.userId,_role:'admin'}),context.supabase.rpc('has_role',{_user_id:context.userId,_role:'reviewer'})]);if(a.error||r.error||(!a.data&&!r.data))throw new Error('Akses ditolak.');return next({context:{isAdmin:Boolean(a.data)}});});
-const uuid=z.string().uuid();
-export const listAdminHadiths=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({q:z.string().max(200).default(''),kategori:z.enum(categories).optional(),status:z.enum(statuses).optional(),kitab:z.string().max(200).optional(),published:z.enum(['all','yes','no']).default('all'),page:z.number().int().min(1).default(1)})).handler(async({data,context})=>{let query=context.supabase.from('hadiths').select('*',{count:'exact'});const q=cleanSearch(data.q);if(q)query=query.or(`code.ilike.*${q}*,tema.ilike.*${q}*,kitab.ilike.*${q}*`);if(data.kategori)query=query.eq('kategori',data.kategori);if(data.status)query=query.eq('status',data.status);if(data.kitab)query=query.eq('kitab',data.kitab);if(data.published!=='all')query=query.eq('is_published',data.published==='yes');const result=await query.order('code').range((data.page-1)*25,data.page*25-1);if(result.error)throw new Error('Daftar hadits tidak dapat dimuat.');return {rows:result.data,total:result.count??0};});
-export const adminReferences=createServerFn({method:'POST'}).middleware([staff]).handler(async({context})=>{const signs=await context.supabase.from('signs').select('*').order('urutan');if(signs.error)throw Error('Tanda tidak dapat dimuat.');const codes:{id:string;code:string;kitab:string|null}[]=[];for(let offset=0;;offset+=1000){const res=await context.supabase.from('hadiths').select('id,code,kitab').order('id').range(offset,offset+999);if(res.error)throw Error('Referensi tidak dapat dimuat.');codes.push(...res.data);if(res.data.length<1000)break;}return {signs:signs.data,codes,isAdmin:context.isAdmin};});
-export const getAdminHadith=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({id:uuid})).handler(async({data,context})=>{const [row,links]=await Promise.all([context.supabase.from('hadiths').select('*').eq('id',data.id).single(),context.supabase.from('sign_hadiths').select('sign_id').eq('hadith_id',data.id)]);if(row.error||links.error)throw Error('Hadits tidak dapat dimuat.');return {row:row.data,signIds:links.data.map(l=>l.sign_id)};});
-export const saveAdminHadith=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({id:uuid,fields:hadithSchema,signIds:z.array(uuid).max(500)})).handler(async({data,context})=>{const {error}=await context.supabase.rpc('save_hadith_with_signs',{p_id:data.id,p_fields:data.fields,p_sign_ids:data.signIds});if(error)throw Error('Gagal menyimpan hadits dan tanda terkait.');return {ok:true};});
-export const bulkHadiths=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({ids:z.array(uuid).min(1).max(500),action:z.enum(['publish','unpublish','delete'])})).handler(async({data,context})=>{if(data.action==='delete'&&!context.isAdmin)throw Error('Hanya admin dapat menghapus.');if(data.action==='publish'){const rows=await context.supabase.from('hadiths').select('id,verified_by').in('id',data.ids);if(rows.error||rows.data.length!==data.ids.length)throw Error('Hadits tidak ditemukan.');if(rows.data.some(r=>!r.verified_by?.trim()))throw Error('Isi verifikator untuk semua hadits terpilih sebelum menerbitkan.');}const result=data.action==='delete'?await context.supabase.from('hadiths').delete().in('id',data.ids):await context.supabase.from('hadiths').update({is_published:data.action==='publish'}).in('id',data.ids);if(result.error)throw Error('Perubahan tidak dapat disimpan.');return {ok:true};});
-const signSchema=z.object({slug:z.string().trim().min(1).max(150).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),nama:z.string().trim().min(1).max(300),deskripsi_singkat:z.string().trim().max(10000).nullable(),kategori:z.enum(categories).nullable(),status:z.enum(['sudah_terjadi','sedang_berlangsung','belum_terjadi']),urutan:z.number().int()});
-export const saveSign=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({id:uuid.optional(),fields:signSchema})).handler(async({data,context})=>{if(!context.isAdmin)throw Error('Hanya admin dapat mengelola tanda.');const res=data.id?await context.supabase.from('signs').update(data.fields).eq('id',data.id):await context.supabase.from('signs').insert(data.fields);if(res.error)throw Error('Tanda gagal disimpan. Periksa slug unik.');return {ok:true};});
-export const deleteSign=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({id:uuid})).handler(async({data,context})=>{if(!context.isAdmin)throw Error('Hanya admin dapat menghapus tanda.');const {error}=await context.supabase.from('signs').delete().eq('id',data.id);if(error)throw Error('Tanda gagal dihapus.');return {ok:true};});
-export const importHadithBatch=createServerFn({method:'POST'}).middleware([staff]).inputValidator(z.object({rows:z.array(z.object({row:z.number().int(),fields:z.record(z.unknown()),decision:z.enum(['skip','update'])})).max(10)})).handler(async({data,context})=>{if(!context.isAdmin)throw Error('Hanya admin dapat mengimpor.');let inserted=0,updated=0,skipped=0;const errors:{row:number;code:string;message:string}[]=[];for(const item of data.rows){const parsed=hadithSchema.safeParse(draftFields(item.fields));if(!parsed.success){errors.push({row:item.row,code:String(item.fields['code']??''),message:parsed.error.issues.map(i=>i.message).join('; ')});continue;}const fields=parsed.data as TablesInsert<'hadiths'>;const existing=await context.supabase.from('hadiths').select('id').eq('code',fields.code).maybeSingle();if(existing.error){errors.push({row:item.row,code:fields.code,message:'Gagal memeriksa kode'});continue;}if(existing.data&&item.decision==='skip'){skipped++;continue;}const result=existing.data?await context.supabase.from('hadiths').update({...fields,is_published:false,verified_at:null}).eq('id',existing.data.id):await context.supabase.from('hadiths').insert({...fields,is_published:false,verified_at:null});if(result.error)errors.push({row:item.row,code:fields.code,message:'Gagal menyimpan baris; periksa data dan izin.'});else if(existing.data)updated++;else inserted++;}return {inserted,updated,skipped,failed:errors.length,errors};});
-export type AdminHadith=Tables<'hadiths'>;
+import { createServerFn } from "@tanstack/react-start";
+import { createMiddleware } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+import { hadithSchema, categories, statuses, draftFields } from "./admin/rules";
+import { cleanSearch } from "./hadith-search";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+const staff = createMiddleware({ type: "function" })
+  .middleware([requireSupabaseAuth])
+  .server(async ({ context, next }) => {
+    const [a, r] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "reviewer" }),
+    ]);
+    if (a.error || r.error || (!a.data && !r.data)) throw new Error("Akses ditolak.");
+    return next({ context: { isAdmin: Boolean(a.data) } });
+  });
+const uuid = z.string().uuid();
+export const listAdminHadiths = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(
+    z.object({
+      q: z.string().max(200).default(""),
+      kategori: z.enum(categories).optional(),
+      status: z.enum(statuses).optional(),
+      kitab: z.string().max(200).optional(),
+      published: z.enum(["all", "yes", "no"]).default("all"),
+      page: z.number().int().min(1).default(1),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    let query = context.supabase.from("hadiths").select("*", { count: "exact" });
+    const q = cleanSearch(data.q);
+    if (q) query = query.or(`code.ilike.*${q}*,tema.ilike.*${q}*,kitab.ilike.*${q}*`);
+    if (data.kategori) query = query.eq("kategori", data.kategori);
+    if (data.status) query = query.eq("status", data.status);
+    if (data.kitab) query = query.eq("kitab", data.kitab);
+    if (data.published !== "all") query = query.eq("is_published", data.published === "yes");
+    const result = await query.order("code").range((data.page - 1) * 25, data.page * 25 - 1);
+    if (result.error) throw new Error("Daftar hadits tidak dapat dimuat.");
+    return { rows: result.data, total: result.count ?? 0 };
+  });
+export const adminReferences = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .handler(async ({ context }) => {
+    const signs = await context.supabase.from("signs").select("*").order("urutan");
+    if (signs.error) throw Error("Tanda tidak dapat dimuat.");
+    const codes: { id: string; code: string; kitab: string | null }[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const res = await context.supabase
+        .from("hadiths")
+        .select("id,code,kitab")
+        .order("id")
+        .range(offset, offset + 999);
+      if (res.error) throw Error("Referensi tidak dapat dimuat.");
+      codes.push(...res.data);
+      if (res.data.length < 1000) break;
+    }
+    return { signs: signs.data, codes, isAdmin: context.isAdmin };
+  });
+export const getAdminHadith = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(z.object({ id: uuid }))
+  .handler(async ({ data, context }) => {
+    const [row, links] = await Promise.all([
+      context.supabase.from("hadiths").select("*").eq("id", data.id).single(),
+      context.supabase.from("sign_hadiths").select("sign_id").eq("hadith_id", data.id),
+    ]);
+    if (row.error || links.error) throw Error("Hadits tidak dapat dimuat.");
+    return { row: row.data, signIds: links.data.map((l) => l.sign_id) };
+  });
+export const saveAdminHadith = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(z.object({ id: uuid, fields: hadithSchema, signIds: z.array(uuid).max(500) }))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("save_hadith_with_signs", {
+      p_id: data.id,
+      p_fields: data.fields,
+      p_sign_ids: data.signIds,
+    });
+    if (error) throw Error("Gagal menyimpan hadits dan tanda terkait.");
+    return { ok: true };
+  });
+export const bulkHadiths = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(
+    z.object({
+      ids: z.array(uuid).min(1).max(500),
+      action: z.enum(["publish", "unpublish", "delete"]),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.action === "delete" && !context.isAdmin) throw Error("Hanya admin dapat menghapus.");
+    if (data.action === "publish") {
+      const rows = await context.supabase
+        .from("hadiths")
+        .select("id,verified_by")
+        .in("id", data.ids);
+      if (rows.error || rows.data.length !== data.ids.length)
+        throw Error("Hadits tidak ditemukan.");
+      if (rows.data.some((r) => !r.verified_by?.trim()))
+        throw Error("Isi verifikator untuk semua hadits terpilih sebelum menerbitkan.");
+    }
+    const result =
+      data.action === "delete"
+        ? await context.supabase.from("hadiths").delete().in("id", data.ids)
+        : await context.supabase
+            .from("hadiths")
+            .update({ is_published: data.action === "publish" })
+            .in("id", data.ids);
+    if (result.error) throw Error("Perubahan tidak dapat disimpan.");
+    return { ok: true };
+  });
+const signSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(150)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  nama: z.string().trim().min(1).max(300),
+  deskripsi_singkat: z.string().trim().max(10000).nullable(),
+  kategori: z.enum(categories).nullable(),
+  status: z.enum(["sudah_terjadi", "sedang_berlangsung", "belum_terjadi"]),
+  urutan: z.number().int(),
+});
+export const saveSign = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(z.object({ id: uuid.optional(), fields: signSchema }))
+  .handler(async ({ data, context }) => {
+    if (!context.isAdmin) throw Error("Hanya admin dapat mengelola tanda.");
+    const res = data.id
+      ? await context.supabase.from("signs").update(data.fields).eq("id", data.id)
+      : await context.supabase.from("signs").insert(data.fields);
+    if (res.error) throw Error("Tanda gagal disimpan. Periksa slug unik.");
+    return { ok: true };
+  });
+export const deleteSign = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(z.object({ id: uuid }))
+  .handler(async ({ data, context }) => {
+    if (!context.isAdmin) throw Error("Hanya admin dapat menghapus tanda.");
+    const { error } = await context.supabase.from("signs").delete().eq("id", data.id);
+    if (error) throw Error("Tanda gagal dihapus.");
+    return { ok: true };
+  });
+export const importHadithBatch = createServerFn({ method: "POST" })
+  .middleware([staff])
+  .inputValidator(
+    z.object({
+      rows: z
+        .array(
+          z.object({
+            row: z.number().int(),
+            fields: z.record(z.unknown()),
+            decision: z.enum(["skip", "update"]),
+          }),
+        )
+        .max(10),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (!context.isAdmin) throw Error("Hanya admin dapat mengimpor.");
+    let inserted = 0,
+      updated = 0,
+      skipped = 0;
+    const errors: { row: number; code: string; message: string }[] = [];
+    for (const item of data.rows) {
+      const parsed = hadithSchema.safeParse(draftFields(item.fields));
+      if (!parsed.success) {
+        errors.push({
+          row: item.row,
+          code: String(item.fields["code"] ?? ""),
+          message: parsed.error.issues.map((i) => i.message).join("; "),
+        });
+        continue;
+      }
+      const fields = parsed.data as TablesInsert<"hadiths">;
+      const existing = await context.supabase
+        .from("hadiths")
+        .select("id")
+        .eq("code", fields.code)
+        .maybeSingle();
+      if (existing.error) {
+        errors.push({ row: item.row, code: fields.code, message: "Gagal memeriksa kode" });
+        continue;
+      }
+      if (existing.data && item.decision === "skip") {
+        skipped++;
+        continue;
+      }
+      const result = existing.data
+        ? await context.supabase
+            .from("hadiths")
+            .update({ ...fields, is_published: false, verified_at: null })
+            .eq("id", existing.data.id)
+        : await context.supabase
+            .from("hadiths")
+            .insert({ ...fields, is_published: false, verified_at: null });
+      if (result.error)
+        errors.push({
+          row: item.row,
+          code: fields.code,
+          message: "Gagal menyimpan baris; periksa data dan izin.",
+        });
+      else if (existing.data) updated++;
+      else inserted++;
+    }
+    return { inserted, updated, skipped, failed: errors.length, errors };
+  });
+export type AdminHadith = Tables<"hadiths">;
