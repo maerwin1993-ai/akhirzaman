@@ -43,6 +43,12 @@ export function Hero() {
       : lang === "id"
         ? "“[DUMMY] Tidak akan terjadi kiamat hingga muncul sepuluh tanda …”"
         : "“[DUMMY] The Hour will not come until ten signs appear …”") ?? "";
+  const matanShort =
+    (featured &&
+      ((lang === "id" ? featured.matan_ringkas_id : featured.matan_ringkas_en) ??
+        featured.matan_ringkas_id ??
+        featured.matan_ringkas_en)) ||
+    translation;
   const source = featured
     ? `${featured.kitab ?? ""}${featured.nomor ? ` no. ${featured.nomor}` : ""}`
     : "[DUMMY] HR. Muslim no. 2901";
@@ -71,11 +77,18 @@ export function Hero() {
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t.hero.featured}</span>
             {featured ? <HadithStatusBadge status={featured.status} /> : <StatusBadge status="future" />}
           </div>
-          <p className="arabic mt-6 line-clamp-4 text-3xl sm:text-4xl" dir="rtl">
+          <p className="arabic mt-6 line-clamp-2 text-2xl sm:text-3xl" dir="rtl">
             {featured?.teks_arab ?? "لَا تَقُومُ السَّاعَةُ حَتَّى تَكُونُ عَشْرُ آيَاتٍ …"}
           </p>
-          <p className="font-display mt-6 text-xl italic">{translation}</p>
-          <p className="mt-4 text-sm text-muted-foreground">{source}</p>
+          <p className="mt-5 line-clamp-3 text-base leading-relaxed">{matanShort}</p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">{source}</p>
+            {featured && (
+              <Link to="/hadits/$code" params={{ code: featured.code }} className="inline-flex items-center gap-1.5 text-sm font-medium text-dawn hover:underline">
+                {lang === "id" ? "Baca hadits lengkap" : "Read full hadith"} <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
         </article>
       </div>
       <ChevronDown className="absolute bottom-8 left-1/2 h-6 w-6 -translate-x-1/2 text-muted-foreground" />

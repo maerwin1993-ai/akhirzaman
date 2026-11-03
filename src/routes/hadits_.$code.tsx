@@ -153,7 +153,7 @@ function HadithDetailPage() {
       <h1 className="font-display mt-5 text-3xl leading-tight sm:text-4xl">{hadith.tema ?? hadith.code}</h1>
 
       <section className="glass mt-8 rounded-2xl p-6 sm:p-8">
-        <p className="arabic text-right text-2xl leading-[2.2] text-bone sm:text-3xl" dir="rtl">
+        <p className="arabic text-right text-xl leading-[2] text-bone sm:text-[22px]" dir="rtl">
           {hadith.teks_arab}
         </p>
 
@@ -178,7 +178,7 @@ function HadithDetailPage() {
           </div>
         </div>
 
-        {translation && <p className="font-display mt-5 text-lg italic leading-relaxed">{translation}</p>}
+        {translation && <p className="mt-5 text-base leading-[1.8] text-foreground sm:text-[17px]">{translation}</p>}
         {matan && (
           <div className="mt-6 border-t border-border pt-5">
             <h2 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t.hadith.matan}</h2>
