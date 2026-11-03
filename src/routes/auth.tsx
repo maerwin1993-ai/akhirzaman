@@ -1,0 +1,2 @@
+import { createFileRoute,redirect } from '@tanstack/react-router';
+export const Route=createFileRoute('/auth')({beforeLoad:()=>{throw redirect({to:'/admin/login'});},head:()=>({meta:[{title:'Masuk staf | akhirzaman.id'},{name:'description',content:'Akses akun staf akhirzaman.id.'},{property:'og:title',content:'Masuk staf | akhirzaman.id'},{property:'og:description',content:'Akses akun staf akhirzaman.id.'},{property:'og:type',content:'website'},{name:'twitter:card',content:'summary'}]})});
