@@ -17,6 +17,7 @@ export type Database = {
       hadiths: {
         Row: {
           bab: string | null
+          catatan_ustadz: string | null
           code: string
           created_at: string
           derajat: string | null
@@ -30,6 +31,7 @@ export type Database = {
           matan_ringkas_id: string | null
           nomor: string | null
           penilai_derajat: string | null
+          pilih: string | null
           rujukan_syarah: string | null
           status: Database["public"]["Enums"]["hadith_status"] | null
           syarah_ringkas: string | null
@@ -43,6 +45,7 @@ export type Database = {
         }
         Insert: {
           bab?: string | null
+          catatan_ustadz?: string | null
           code: string
           created_at?: string
           derajat?: string | null
@@ -56,6 +59,7 @@ export type Database = {
           matan_ringkas_id?: string | null
           nomor?: string | null
           penilai_derajat?: string | null
+          pilih?: string | null
           rujukan_syarah?: string | null
           status?: Database["public"]["Enums"]["hadith_status"] | null
           syarah_ringkas?: string | null
@@ -69,6 +73,7 @@ export type Database = {
         }
         Update: {
           bab?: string | null
+          catatan_ustadz?: string | null
           code?: string
           created_at?: string
           derajat?: string | null
@@ -82,6 +87,7 @@ export type Database = {
           matan_ringkas_id?: string | null
           nomor?: string | null
           penilai_derajat?: string | null
+          pilih?: string | null
           rujukan_syarah?: string | null
           status?: Database["public"]["Enums"]["hadith_status"] | null
           syarah_ringkas?: string | null
@@ -196,6 +202,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      save_hadith_with_signs: {
+        Args: { p_fields: Json; p_id: string; p_sign_ids: string[] }
+        Returns: string
       }
     }
     Enums: {
