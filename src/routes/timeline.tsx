@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ComingSoon } from "@/components/site/ComingSoon";
-import { useI18n } from "@/lib/i18n";
+import { Timeline } from "@/components/site/Timeline";
 
 export const Route = createFileRoute("/timeline")({
   head: () => ({
@@ -17,6 +16,5 @@ export const Route = createFileRoute("/timeline")({
 });
 
 function Page() {
-  const { t } = useI18n();
-  return <ComingSoon title={t.nav.timeline} />;
+  return <Timeline />;
 }
