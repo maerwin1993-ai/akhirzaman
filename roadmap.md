@@ -18,9 +18,13 @@ Connection: external Supabase, ref `syjztybuacuszmxyrvgw` (already wired in `.en
 - [x] Query state handed from server to browser so the first render matches the server HTML
 
 ## Admin (protected /admin, admin|reviewer only) — open
-- [ ] Email + password login, no public sign-up page
-- [ ] `/admin/hadits`: table, search, filters, inline publish toggle, full edit form
-- [ ] `/admin/import`: CSV/XLSX upload, column mapping, preview + validation report (missing required, duplicate code), rows land unpublished
+- [ ] Email/password login at `/admin/login`, logout, admin/reviewer access; no profiles or public signup
+- [ ] `/admin/hadits`: search, filters, pagination, edit every field, related signs, verified publication, bulk actions
+- [ ] `/admin/signs`: admin-only CRUD
+- [ ] `/admin/import`: CSV/XLSX sheets, mapping, selected rows, validation, per-code duplicate decisions, draft-only batches, error download
+- [ ] Database permissions: reviewer edits/publication, admin deletes/signs/import; publication validation trigger
+- [ ] Rule tests, public regression checks, admin flow verification where available
+- [ ] Exact first-admin SQL and external Supabase Auth dashboard instructions
 
 ## Handoff notes
 - [x] First-admin SQL snippet (run in Supabase SQL editor after creating your account):
