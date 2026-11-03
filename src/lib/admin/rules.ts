@@ -18,7 +18,7 @@ export function prepareImport(rows:Record<string,string>[],mapping:Record<string
  const errors:string[]=[];for(const f of ['code','kitab','nomor','teks_arab'])if(!fields[f])errors.push(`${labels[f]} wajib diisi`);
  const code=String(fields['code']??'').toUpperCase();fields['code']=code;
  for(const [field,values] of [['kategori',categories],['status',statuses]] as const){const v=mapEnum(String(fields[field]??''),values);if(v===undefined)errors.push(`${labels[field]} tidak dikenal`);fields[field]=v??null;}
- const parsed=hadithSchema.safeParse(fields);if(!parsed.success)for(const issue of parsed.error.issues){const message=issue.message;if(!errors.includes(message) && !['code','kitab','nomor','teks_arab'].includes(String(issue.path[0])))errors.push(message);}
+ const parsed=hadithSchema.safeParse(fields);if(!parsed.success)for(const issue of parsed.error.issues){const message=issue.message;if(!errors.includes(message) && !(issue.code==='too_small' && ['code','kitab','nomor','teks_arab'].includes(String(issue.path[0]))))errors.push(message);}
  const duplicate=seen.has(code)||known.has(code);seen.add(code);output.push({row:index+2,fields,errors,duplicate,code});});return output;
 }
 export function draftFields(fields:Record<string,unknown>){return {...fields,is_published:false};}

@@ -10,4 +10,5 @@ it.each(categories)('maps category %s',category=>{expect(prepareImport([{...row,
 it.each(statuses)('maps status %s',status=>{expect(prepareImport([{...row,status:status.replaceAll('_',' ')}],mapping,false,[])[0]?.fields['status']).toBe(status);});
 it('reports unknown category and status',()=>{expect(prepareImport([{...row,kategori:'unknown',status:'unknown'}],mapping,false,[])[0]?.errors).toHaveLength(2);});
 it('identifies duplicates in the database and file',()=>{expect(prepareImport([row],mapping,false,['X001'])[0]?.duplicate).toBe(true);expect(prepareImport([row,row],mapping,false,[]).map(r=>r.duplicate)).toEqual([false,true]);});
+it('reports oversized required fields before import',()=>{expect(prepareImport([{...row,teks_arab:'ع'.repeat(100001)}],mapping,false,[])[0]?.errors.length).toBeGreaterThan(0);});
 it('preserves long Arabic across 350 rows',()=>{const arabic='حديث '.repeat(5000);const rows=Array.from({length:350},(_,i)=>({...row,id:`A${i}`,teks_arab:arabic}));const result=prepareImport(rows,mapping,false,[]);expect(result).toHaveLength(350);expect(result[349]?.fields['teks_arab']).toBe(arabic.trim());expect(result[349]?.errors).toEqual([]);});});
