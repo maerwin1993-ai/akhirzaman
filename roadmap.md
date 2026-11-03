@@ -17,14 +17,15 @@ Connection: external Supabase, ref `syjztybuacuszmxyrvgw` (already wired in `.en
 - [x] Home: featured hadith + sign map from DB (positions derived from `urutan`), falls back to the built-in placeholders when the database is empty
 - [x] Query state handed from server to browser so the first render matches the server HTML
 
-## Admin (protected /admin, admin|reviewer only) — open
-- [ ] Email/password login at `/admin/login`, logout, admin/reviewer access; no profiles or public signup
-- [ ] `/admin/hadits`: search, filters, pagination, edit every field, related signs, verified publication, bulk actions
-- [ ] `/admin/signs`: admin-only CRUD
-- [ ] `/admin/import`: CSV/XLSX sheets, mapping, selected rows, validation, per-code duplicate decisions, draft-only batches, error download
-- [ ] Database permissions: reviewer edits/publication, admin deletes/signs/import; publication validation trigger
-- [ ] Rule tests, public regression checks, admin flow verification where available
-- [ ] Exact first-admin SQL and external Supabase Auth dashboard instructions
+## Admin (protected /admin, admin|reviewer only) — implemented
+- [x] Email/password login at `/admin/login`, logout, admin/reviewer access; no profiles or public signup
+- [x] `/admin/hadits`: search, filters, pagination, edit every field, related signs, verified publication, bulk actions
+- [x] `/admin/signs`: admin-only CRUD
+- [x] `/admin/import`: CSV/XLSX sheets, mapping, selected rows, validation, per-code duplicate decisions, draft-only batches, error download
+- [x] Database permissions: reviewer edits/publication, admin deletes/signs/import; publication validation trigger
+- [x] 27 passing tests, public regression, anonymous admin redirects and rejected login, UTF-8 Arabic spreadsheet worker check
+- [x] Exact first-admin SQL and external Supabase Auth dashboard instructions in ADMIN_SETUP.md
+- [ ] Authenticated admin edit/import/read-back verification — blocked by external Supabase account access; user must create the first admin and test with their session
 
 ## Handoff notes
 - [x] First-admin SQL snippet (run in Supabase SQL editor after creating your account):
@@ -32,6 +33,6 @@ Connection: external Supabase, ref `syjztybuacuszmxyrvgw` (already wired in `.en
   insert into public.user_roles (user_id, role)
   select id, 'admin' from auth.users where email = 'email-anda@example.com';
   ```
-- [ ] User must enable email/password provider: Supabase dashboard → Authentication → Providers → Email
+- [ ] User must enable email/password provider and disable public signups after first-admin creation; external hosted settings unverified
 - [ ] Replace the three `[DUMMY]` hadiths and the nine seed signs with authentic imported content
 
