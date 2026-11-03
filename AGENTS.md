@@ -10,3 +10,7 @@
 <!-- LOVABLE:END -->
 
 - Keep Home's photographic background and scroll-motion lifecycle in a dedicated browser-safe component; this isolates its layers and cleanup from other Home sections.
+- Staff pages live under the integration-compatible authenticated layout with a nested role gate; the public login remains outside it so anonymous users can sign in.
+- Admin reads and writes use authenticated TanStack server functions and RLS; the atomic hadith/sign-link SQL function prevents partially saved edits.
+- Parse spreadsheet files in a dedicated browser worker and import bounded batches through authenticated server functions so long Arabic workbooks do not block the interface.
+- Root owns the single auth-transition subscriber and switches only admin URLs out of the public shell, preserving public presentation.
