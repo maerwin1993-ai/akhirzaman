@@ -1,0 +1,337 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Search, Pencil, Trash2, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Picker, adminHead } from "@/components/admin/Controls";
+import { HadithEditor } from "@/components/admin/HadithEditor";
+import { listAdminHadiths, adminReferences, bulkHadiths } from "@/lib/admin.functions";
+import { categories, statuses } from "@/lib/admin/rules";
+export const Route = createFileRoute("/_authenticated/admin/hadits")({
+  head: () => adminHead("Hadits", "Redaksi dan verifikasi koleksi hadits akhirzaman.id."),
+  component: HadithAdmin,
+});
+function HadithAdmin() {
+  const list = useServerFn(listAdminHadiths);
+  const refs = useServerFn(adminReferences);
+  const bulk = useServerFn(bulkHadiths);
+  const client = useQueryClient();
+  const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [kategori, setKategori] = useState("");
+  const [status, setStatus] = useState("");
+  const [kitab, setKitab] = useState("");
+  const [published, setPublished] = useState<"all" | "yes" | "no">("all");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [edit, setEdit] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(q);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [q]);
+  useEffect(() => {
+    setSelected([]);
+  }, [search, kategori, status, kitab, published, page]);
+  const references = useQuery({ queryKey: ["admin", "references"], queryFn: () => refs() });
+  const query = useQuery({
+    queryKey: ["admin", "hadiths", search, kategori, status, kitab, published, page],
+    queryFn: () =>
+      list({
+        data: {
+          q: search,
+          kategori: categories.find((c) => c === kategori),
+          status: statuses.find((s) => s === status),
+          kitab: kitab || undefined,
+          published,
+          page,
+        },
+      }),
+    placeholderData: keepPreviousData,
+  });
+  async function action(ids: string[], action: "publish" | "unpublish" | "delete") {
+    setBusy(true);
+    try {
+      await bulk({ data: { ids, action } });
+      setSelected([]);
+      setDeleting([]);
+      await client.invalidateQueries({ queryKey: ["admin"] });
+      toast.success("Perubahan tersimpan");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const rows = query.data?.rows ?? [];
+  const books = [
+    ...new Set(
+      references.data?.codes.map((r) => r.kitab).filter((v): v is string => Boolean(v)) ?? [],
+    ),
+  ].sort();
+  const resetFilter = (setter: (v: string) => void) => (v: string) => {
+    setter(v);
+    setPage(1);
+  };
+  return (
+    <>
+      <div className="mb-7 flex items-end justify-between gap-4">
+        <div>
+          <span className="text-xs uppercase text-primary">Redaksi</span>
+          <h1 className="mt-2 text-4xl font-display">Koleksi hadits</h1>
+        </div>
+        <span className="text-sm text-muted-foreground">{query.data?.total ?? 0} hadits</span>
+      </div>
+      <div className="flex flex-wrap gap-3 border-y border-border py-4">
+        <div className="relative min-w-48 flex-1">
+          <Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
+          <Input
+            aria-label="Cari hadits admin"
+            placeholder="Cari kode, tema, kitab…"
+            className="pl-9"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <Picker
+          label="Filter kategori"
+          value={kategori}
+          onChange={resetFilter(setKategori)}
+          options={categories}
+          empty="Semua kategori"
+        />
+        <Picker
+          label="Filter status"
+          value={status}
+          onChange={resetFilter(setStatus)}
+          options={statuses}
+          empty="Semua status"
+        />
+        <Picker
+          label="Filter kitab"
+          value={kitab}
+          onChange={resetFilter(setKitab)}
+          options={books}
+          empty="Semua kitab"
+        />
+        <select
+          aria-label="Filter publikasi"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          value={published}
+          onChange={(e) => {
+            setPublished(e.target.value === "yes" ? "yes" : e.target.value === "no" ? "no" : "all");
+            setPage(1);
+          }}
+        >
+          <option value="all">Semua publikasi</option>
+          <option value="yes">Diterbitkan</option>
+          <option value="no">Draf</option>
+        </select>
+      </div>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 py-4">
+          <span className="mr-3 text-sm">{selected.length} dipilih</span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => action(selected, "publish")}
+          >
+            <Check />
+            Terbitkan
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => action(selected, "unpublish")}
+          >
+            <X />
+            Jadikan draf
+          </Button>
+          {references.data?.isAdmin && (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={busy}
+              onClick={() => setDeleting(selected)}
+            >
+              <Trash2 />
+              Hapus
+            </Button>
+          )}
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-border text-xs text-muted-foreground">
+            <tr>
+              <th className="p-3">
+                <Checkbox
+                  aria-label="Pilih semua di halaman"
+                  checked={rows.length > 0 && selected.length === rows.length}
+                  onCheckedChange={(v) => setSelected(v ? rows.map((r) => r.id) : [])}
+                />
+              </th>
+              {[
+                "Kode / Tema",
+                "Kitab",
+                "Nomor",
+                "Kategori",
+                "Status",
+                "Terbit",
+                "Verifikator",
+                "",
+              ].map((v, i) => (
+                <th className="p-3 font-normal whitespace-nowrap" key={i}>
+                  {v}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-b border-border hover:bg-muted/30">
+                <td className="p-3">
+                  <Checkbox
+                    aria-label={`Pilih ${r.code}`}
+                    checked={selected.includes(r.id)}
+                    onCheckedChange={(v) =>
+                      setSelected((ids) => (v ? [...ids, r.id] : ids.filter((id) => id !== r.id)))
+                    }
+                  />
+                </td>
+                <td className="min-w-48 p-3">
+                  <div className="font-medium text-primary">{r.code}</div>
+                  <div className="mt-1 max-w-64">{r.tema || "—"}</div>
+                </td>
+                <td className="p-3">{r.kitab || "—"}</td>
+                <td className="p-3">{r.nomor || "—"}</td>
+                <td className="p-3">{r.kategori?.replaceAll("_", " ") || "—"}</td>
+                <td className="p-3">{r.status?.replaceAll("_", " ") || "—"}</td>
+                <td className="p-3">
+                  <Switch
+                    aria-label={`Terbitkan ${r.code}`}
+                    disabled={busy || query.isPlaceholderData}
+                    checked={r.is_published}
+                    onCheckedChange={(v) => action([r.id], v ? "publish" : "unpublish")}
+                  />
+                </td>
+                <td className="p-3">{r.verified_by || "—"}</td>
+                <td className="p-3">
+                  <div className="flex gap-1">
+                    <Button
+                      title={`Edit ${r.code}`}
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEdit(r.id)}
+                    >
+                      <Pencil />
+                    </Button>
+                    {references.data?.isAdmin && (
+                      <Button
+                        title={`Hapus ${r.code}`}
+                        size="icon"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => setDeleting([r.id])}
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {query.isPending && (
+        <p className="py-12 text-center text-muted-foreground">Memuat koleksi…</p>
+      )}
+      {query.isError && (
+        <div role="alert" className="py-8 text-destructive">
+          Koleksi tidak dapat dimuat.{" "}
+          <Button variant="outline" onClick={() => query.refetch()}>
+            Coba lagi
+          </Button>
+        </div>
+      )}
+      {!query.isPending && !query.isError && rows.length === 0 && (
+        <p className="py-12 text-center text-muted-foreground">Tidak ada hadits yang sesuai.</p>
+      )}
+      <div className="mt-5 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          Halaman {page} / {Math.max(1, Math.ceil((query.data?.total ?? 0) / 25))}
+        </span>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            title="Halaman sebelumnya"
+            disabled={page === 1 || query.isFetching}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="Halaman berikutnya"
+            disabled={page * 25 >= (query.data?.total ?? 0) || query.isFetching}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+      </div>
+      {edit && (
+        <HadithEditor
+          id={edit}
+          signs={references.data?.signs ?? []}
+          onClose={() => setEdit(null)}
+        />
+      )}
+      <AlertDialog
+        open={deleting.length > 0}
+        onOpenChange={(v) => {
+          if (!v && !busy) setDeleting([]);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus {deleting.length} hadits?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hadits dan tautan tanda terkait akan dihapus permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Batal</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={() => action(deleting, "delete")}>
+              Hapus permanen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

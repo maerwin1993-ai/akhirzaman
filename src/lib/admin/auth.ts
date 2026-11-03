@@ -1,0 +1,15 @@
+import { supabase } from "@/integrations/supabase/client";
+export async function staffIdentity() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return null;
+  const [admin, reviewer] = await Promise.all([
+    supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" }),
+    supabase.rpc("has_role", { _user_id: data.user.id, _role: "reviewer" }),
+  ]);
+  if (admin.error || reviewer.error) return null;
+  return admin.data
+    ? { user: data.user, role: "admin" as const }
+    : reviewer.data
+      ? { user: data.user, role: "reviewer" as const }
+      : null;
+}
